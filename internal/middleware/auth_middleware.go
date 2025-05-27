@@ -2,7 +2,7 @@ package middleware
 
 import (
 	"fmt"
-	"os"
+	"go-api/config"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -11,7 +11,7 @@ import (
 
 func JWTAuthMiddleware() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		jwtSecret := os.Getenv("JWT_SECRET")
+		jwtSecret := config.Get().JWTSecret
 		authHeader := c.Get("Authorization")
 		if authHeader == "" {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{

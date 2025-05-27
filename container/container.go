@@ -1,46 +1,30 @@
 package container
 
 import (
+	"context"
 	"fmt"
+	"go-api/config"
 	"go-api/internal/handler"
 	"go-api/internal/repository"
 	"go-api/internal/service"
 	"log"
-	"os"
+	"time"
 
-	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
-type Config struct {
-	DatabaseURL string
-	AppPort     string
-	JWTSecret   string
-}
-
 type Container struct {
-	Config      *Config
+	Config      *config.Config
 	DB          *gorm.DB
 	UserRepo    *repository.UserRepository
 	AuthService *service.AuthService
 	AuthHandler *handler.AuthHandler
 }
 
-func loadConfig() *Config {
-	if err := godotenv.Load(); err != nil {
-	log.Println("Warning: Error loading .env file:", err)
-}
+func initDB() (*gorm.DB, error) {
+	cfg := config.Get()
 
-	return &Config{
-		DatabaseURL: os.Getenv("DATABASE_URL"),
-		AppPort:    os.Getenv("APP_PORT"),
-		JWTSecret:  os.Getenv("JWT_SECRET"),
-	}
-}
-
-
-func initDB(cfg *Config) (*gorm.DB, error) {
 	if cfg.DatabaseURL == "" {
 		return nil, fmt.Errorf("DATABASE_URL environment variable is required")
 	}
@@ -49,6 +33,17 @@ func initDB(cfg *Config) (*gorm.DB, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// Configure connection pool to prevent memory leaks
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get underlying sql.DB: %w", err)
+	}
+
+	// Set connection pool settings
+	sqlDB.SetMaxIdleConns(10)
+	sqlDB.SetMaxOpenConns(100)
+	sqlDB.SetConnMaxLifetime(time.Hour)
 
 	// Auto migrate the user model
 	// if err := db.AutoMigrate(&model.User{}); err != nil {
@@ -61,9 +56,9 @@ func initDB(cfg *Config) (*gorm.DB, error) {
 
 
 func NewContainer() (*Container, error) {
-	cfg := loadConfig()
+	cfg := config.Get()
 
-	db, err := initDB(cfg)
+	db, err := initDB()
 	if err != nil {
 		return nil, fmt.Errorf("failed to init db: %w", err)
 	}
@@ -86,4 +81,22 @@ func NewContainer() (*Container, error) {
 	}
 
 	return container, nil
+}
+
+// Close gracefully shuts down the container and cleans up resources
+func (c *Container) Close(ctx context.Context) error {
+	if c.DB != nil {
+		sqlDB, err := c.DB.DB()
+		if err != nil {
+			return fmt.Errorf("failed to get underlying sql.DB: %w", err)
+		}
+
+		log.Println("Closing database connections...")
+		if err := sqlDB.Close(); err != nil {
+			return fmt.Errorf("failed to close database: %w", err)
+		}
+	}
+
+	log.Println("Container cleanup completed")
+	return nil
 }

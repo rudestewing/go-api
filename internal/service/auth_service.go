@@ -2,9 +2,9 @@ package service
 
 import (
 	"errors"
+	"go-api/config"
 	"go-api/internal/model"
 	"go-api/internal/repository"
-	"os"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -39,7 +39,7 @@ func (s *AuthService) Login(email, password string) (string, error) {
 		"exp":     time.Now().Add(s.tokenExpiry).Unix(),
 	})
 
-	jwtSecret := os.Getenv("JWT_SECRET")
+	jwtSecret := config.Get().JWTSecret
 
 	return token.SignedString([]byte(jwtSecret))
 }
