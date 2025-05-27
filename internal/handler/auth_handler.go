@@ -3,8 +3,8 @@ package handler
 import (
 	"go-api/internal/dto"
 	"go-api/internal/service"
-	"go-api/pkg/response"
-	"go-api/pkg/validator"
+	"go-api/shared/response"
+	"go-api/shared/validator"
 
 	"github.com/gofiber/fiber/v2"
 )

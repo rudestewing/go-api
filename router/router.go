@@ -4,7 +4,7 @@ import (
 	"go-api/container"
 	"go-api/internal/handler"
 	"go-api/internal/middleware"
-	"go-api/pkg/response"
+	"go-api/shared/response"
 
 	"github.com/gofiber/fiber/v2"
 )

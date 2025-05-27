@@ -1,7 +1,7 @@
 package handler
 
 import (
-	"go-api/pkg/response"
+	"go-api/shared/response"
 
 	"github.com/gofiber/fiber/v2"
 )
