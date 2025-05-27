@@ -1,17 +1,22 @@
 package main
 
 import (
+	"go-api/container"
+	"go-api/router"
+
 	"github.com/gofiber/fiber/v2"
 )
 
 func main() {
 	app := fiber.New()
 
-	app.Get("/", func(c *fiber.Ctx) error {
-		return c.Status(fiber.StatusOK).JSON(fiber.Map{
-			"data": "hello",
-		})
-	})
+	container, err := container.NewContainer()
+
+	if(err != nil) {
+		panic(err.Error())
+	}
+
+	router.RegisterRoutes(app, container)
 
 	app.Listen(":8000")
 }
