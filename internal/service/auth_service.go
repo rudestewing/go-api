@@ -19,7 +19,7 @@ type AuthService struct {
 func NewAuthService(userRepo *repository.UserRepository) *AuthService {
 	return &AuthService{
 		userRepo:    userRepo,
-		tokenExpiry: 24 * time.Hour,
+		tokenExpiry: config.Get().JWTExpiry,
 	}
 }
 

@@ -8,7 +8,6 @@ import (
 	"go-api/internal/repository"
 	"go-api/internal/service"
 	"log"
-	"time"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -40,10 +39,10 @@ func initDB() (*gorm.DB, error) {
 		return nil, fmt.Errorf("failed to get underlying sql.DB: %w", err)
 	}
 
-	// Set connection pool settings
-	sqlDB.SetMaxIdleConns(10)
-	sqlDB.SetMaxOpenConns(100)
-	sqlDB.SetConnMaxLifetime(time.Hour)
+	// Set connection pool settings from config
+	sqlDB.SetMaxIdleConns(cfg.DBMaxIdleConns)
+	sqlDB.SetMaxOpenConns(cfg.DBMaxOpenConns)
+	sqlDB.SetConnMaxLifetime(cfg.DBMaxLifetime)
 
 	// Auto migrate the user model
 	// if err := db.AutoMigrate(&model.User{}); err != nil {
@@ -57,8 +56,8 @@ func initDB() (*gorm.DB, error) {
 
 func NewContainer() (*Container, error) {
 	cfg := config.Get()
-
 	db, err := initDB()
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to init db: %w", err)
 	}
