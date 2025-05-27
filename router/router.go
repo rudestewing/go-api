@@ -4,6 +4,7 @@ import (
 	"go-api/container"
 	"go-api/internal/handler"
 	"go-api/internal/middleware"
+	"go-api/pkg/response"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -11,9 +12,7 @@ import (
 func RegisterRoutes(app *fiber.App, container *container.Container) {
 	v1 := app.Group("/api/v1")
 	v1.Get("/", func(c *fiber.Ctx) error {
-		return c.Status(fiber.StatusOK).JSON(fiber.Map{
-			"data": "hello from v1",
-		})
+		return response.SuccessWithMessage(c, "hello from v1", "API is running")
 	})
 
 	// Auth routes (public)

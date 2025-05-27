@@ -1,8 +1,10 @@
 package handler
 
 import (
+	"go-api/internal/dto"
 	"go-api/internal/service"
-	"strings"
+	"go-api/pkg/response"
+	"go-api/pkg/validator"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -17,72 +19,52 @@ func NewAuthHandler(authService *service.AuthService) *AuthHandler {
 	}
 }
 
-type loginRequest struct {
-	Email    string `json:"email" validate:"required,email"`
-	Password string `json:"password" validate:"required,min=8"`
-}
-
-type registerRequest struct {
-	Name     string `json:"name" validate:"required,min=2"`
-	Email    string `json:"email" validate:"required,email"`
-	Password string `json:"password" validate:"required,min=8"`
-}
-
 func (h *AuthHandler) Login(c *fiber.Ctx) error {
-	var req loginRequest
+	var req dto.LoginRequest
+
+	// Parse JSON body
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid request body",
-		})
+		return response.BadRequest(c, "Invalid request body")
 	}
 
-	// Basic validation
-	if strings.TrimSpace(req.Email) == "" || strings.TrimSpace(req.Password) == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Email and password are required",
-		})
+	// Validate request
+	if err := validator.ValidateStruct(&req); err != nil {
+		return response.ValidationError(c, err.Error())
 	}
 
+	// Call service
 	token, err := h.authService.Login(req.Email, req.Password)
 	if err != nil {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": err.Error(),
-		})
+		return response.Unauthorized(c, err.Error())
 	}
 
-	return c.JSON(fiber.Map{
+	return response.Success(c, fiber.Map{
 		"token": token,
 	})
 }
 
 func (h *AuthHandler) Register(c *fiber.Ctx) error {
-	var req registerRequest
+	var req dto.RegisterRequest
+
+	// Parse JSON body
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid request body",
-		})
+		return response.BadRequest(c, "Invalid request body")
 	}
 
-	// Basic validation
-	if strings.TrimSpace(req.Name) == "" || strings.TrimSpace(req.Email) == "" || strings.TrimSpace(req.Password) == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Name, email, and password are required",
-		})
+	// Validate request structure
+	if err := validator.ValidateStruct(&req); err != nil {
+		return response.ValidationError(c, err.Error())
 	}
 
-	if len(req.Password) < 8 {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Password must be at least 8 characters long",
-		})
+	// Additional password validation
+	if err := validator.ValidatePassword(req.Password); err != nil {
+		return response.ValidationError(c, err.Error())
 	}
 
+	// Call service
 	if err := h.authService.Register(req.Email, req.Password, req.Name); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": err.Error(),
-		})
+		return response.InternalError(c, err.Error())
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
-		"message": "User registered successfully",
-	})
+	return response.SuccessWithMessage(c, nil, "User registered successfully")
 }

@@ -1,6 +1,10 @@
 package handler
 
-import "github.com/gofiber/fiber/v2"
+import (
+	"go-api/pkg/response"
+
+	"github.com/gofiber/fiber/v2"
+)
 
 type UserHandler struct {
 	// Tambahkan dependencies jika diperlukan
@@ -14,8 +18,10 @@ func (h *UserHandler) GetProfile(c *fiber.Ctx) error {
 	userId := c.Locals("user_id")
 	email := c.Locals("email")
 
-	return c.JSON(fiber.Map{
+	userData := fiber.Map{
 		"user_id": userId,
 		"email":   email,
-	})
+	}
+
+	return response.Success(c, userData)
 }
