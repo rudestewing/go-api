@@ -1,4 +1,3 @@
--- +migrate Up
 -- Add role_id column to users table (no foreign key constraint)
 DO $$
 BEGIN
@@ -16,8 +15,3 @@ BEGIN
     UPDATE users SET role_id = 2 WHERE role_id IS NULL OR role_id = 0;
 
 END $$;
-
--- +migrate Down
--- Remove role_id column and its index
-DROP INDEX IF EXISTS idx_users_role_id;
-ALTER TABLE users DROP COLUMN IF EXISTS role_id;

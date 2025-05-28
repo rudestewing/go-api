@@ -1,4 +1,3 @@
--- +migrate Up
 -- Create roles table for GORM
 DO $$
 BEGIN
@@ -21,9 +20,3 @@ IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_roles_deleted_at'
 END IF;
 
 END $$;
-
--- +migrate Down
--- Drop roles table and its indexes
-DROP INDEX IF EXISTS idx_roles_deleted_at;
-DROP INDEX IF EXISTS idx_roles_code;
-DROP TABLE IF EXISTS roles;

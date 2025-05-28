@@ -1,4 +1,3 @@
--- +migrate Up
 -- Ensure users table exists with all required columns
 DO $$
 BEGIN
@@ -13,8 +12,3 @@ CREATE TABLE IF NOT EXISTS users (
     deleted_at TIMESTAMP NULL
 );
 END $$;
-
--- +migrate Down
-DROP INDEX IF EXISTS idx_users_active;
-DROP INDEX IF EXISTS idx_users_email;
-DROP TABLE IF EXISTS users;

@@ -1,35 +1,24 @@
 package migration
 
 import (
+	"database/sql"
 	"fmt"
 	"go-api/config"
 	"log"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 	"time"
 
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
+	"github.com/golang-migrate/migrate/v4"
+	"github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
+	_ "github.com/lib/pq"
 )
 
-type Migration struct {
-	ID        uint      `gorm:"primaryKey"`
-	Name      string    `gorm:"uniqueIndex;not null"`
-	Batch     int       `gorm:"not null"`
-	ExecutedAt time.Time `gorm:"autoCreateTime"`
-}
-
 type MigrationManager struct {
-	db *gorm.DB
-}
-
-type MigrationFile struct {
-	Name     string
-	FilePath string
-	UpSQL    string
-	DownSQL  string
+	migrate *migrate.Migrate
+	db      *sql.DB
 }
 
 func NewMigrationManager() (*MigrationManager, error) {
@@ -38,344 +27,239 @@ func NewMigrationManager() (*MigrationManager, error) {
 		return nil, fmt.Errorf("DATABASE_URL environment variable is required")
 	}
 
-	db, err := gorm.Open(postgres.Open(cfg.DatabaseURL), &gorm.Config{})
+	// Open database connection
+	db, err := sql.Open("postgres", cfg.DatabaseURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
 
-	manager := &MigrationManager{db: db}
-
-	// Create migrations table if it doesn't exist
-	if err := manager.createMigrationsTable(); err != nil {
-		return nil, fmt.Errorf("failed to create migrations table: %w", err)
+	// Test connection
+	if err := db.Ping(); err != nil {
+		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 
-	return manager, nil
-}
-
-func (m *MigrationManager) createMigrationsTable() error {
-	// Check if migrations table exists
-	var exists bool
-	err := m.db.Raw("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'migrations')").Scan(&exists).Error
+	// Create postgres driver instance
+	driver, err := postgres.WithInstance(db, &postgres.Config{})
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("failed to create postgres driver: %w", err)
 	}
 
-	if !exists {
-		// Create new table
-		return m.db.AutoMigrate(&Migration{})
-	}
-
-	// Table exists, check if we need to update schema
-	var hasIDColumn, hasNameColumn, hasBatchColumn, hasExecutedAtColumn bool
-
-	// Check columns existence
-	m.db.Raw("SELECT EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'migrations' AND column_name = 'id')").Scan(&hasIDColumn)
-	m.db.Raw("SELECT EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'migrations' AND column_name = 'name')").Scan(&hasNameColumn)
-	m.db.Raw("SELECT EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'migrations' AND column_name = 'batch')").Scan(&hasBatchColumn)
-	m.db.Raw("SELECT EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'migrations' AND column_name = 'executed_at')").Scan(&hasExecutedAtColumn)
-
-	// Add missing columns if needed
-	if !hasBatchColumn {
-		// Add batch column with default value
-		err := m.db.Exec("ALTER TABLE migrations ADD COLUMN batch INTEGER DEFAULT 1").Error
-		if err != nil {
-			return fmt.Errorf("failed to add batch column: %w", err)
-		}
-
-		// Update existing records to have batch = 1
-		err = m.db.Exec("UPDATE migrations SET batch = 1 WHERE batch IS NULL").Error
-		if err != nil {
-			return fmt.Errorf("failed to update batch values: %w", err)
-		}
-
-		// Make batch column NOT NULL
-		err = m.db.Exec("ALTER TABLE migrations ALTER COLUMN batch SET NOT NULL").Error
-		if err != nil {
-			return fmt.Errorf("failed to make batch column NOT NULL: %w", err)
-		}
-	}
-
-	if !hasExecutedAtColumn {
-		err := m.db.Exec("ALTER TABLE migrations ADD COLUMN executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP").Error
-		if err != nil {
-			return fmt.Errorf("failed to add executed_at column: %w", err)
-		}
-	}
-
-	return nil
-}
-
-func (m *MigrationManager) GetExecutedMigrations() ([]string, error) {
-	var migrations []Migration
-	if err := m.db.Order("executed_at").Find(&migrations).Error; err != nil {
-		return nil, err
-	}
-
-	executed := make([]string, len(migrations))
-	for i, migration := range migrations {
-		executed[i] = migration.Name
-	}
-	return executed, nil
-}
-
-func (m *MigrationManager) GetPendingMigrations() ([]MigrationFile, error) {
-	executed, err := m.GetExecutedMigrations()
+	// Get absolute path to migrations directory
+	migrationsPath, err := filepath.Abs("database/migrations")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get absolute path to migrations: %w", err)
 	}
 
-	executedMap := make(map[string]bool)
-	for _, name := range executed {
-		executedMap[name] = true
+	// Create migrations directory if it doesn't exist
+	if err := os.MkdirAll(migrationsPath, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create migrations directory: %w", err)
 	}
 
-	allMigrations, err := m.loadMigrationFiles()
+	// Create migrate instance
+	m, err := migrate.NewWithDatabaseInstance(
+		fmt.Sprintf("file://%s", migrationsPath),
+		"postgres",
+		driver,
+	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create migrate instance: %w", err)
 	}
 
-	var pending []MigrationFile
-	for _, migration := range allMigrations {
-		if !executedMap[migration.Name] {
-			pending = append(pending, migration)
-		}
-	}
-
-	return pending, nil
-}
-
-func (m *MigrationManager) loadMigrationFiles() ([]MigrationFile, error) {
-	migrationsDir := "database/migrations"
-	if _, err := os.Stat(migrationsDir); os.IsNotExist(err) {
-		return []MigrationFile{}, nil
-	}
-
-	files, err := os.ReadDir(migrationsDir)
-	if err != nil {
-		return nil, err
-	}
-
-	var migrations []MigrationFile
-	for _, file := range files {
-		if file.IsDir() || !strings.HasSuffix(file.Name(), ".sql") {
-			continue
-		}
-
-		migrationFile, err := m.parseMigrationFile(filepath.Join(migrationsDir, file.Name()))
-		if err != nil {
-			log.Printf("Warning: Failed to parse migration file %s: %v", file.Name(), err)
-			continue
-		}
-
-		migrations = append(migrations, migrationFile)
-	}
-
-	// Sort migrations by filename (which should include timestamp)
-	sort.Slice(migrations, func(i, j int) bool {
-		return migrations[i].Name < migrations[j].Name
-	})
-
-	return migrations, nil
-}
-
-func (m *MigrationManager) parseMigrationFile(filePath string) (MigrationFile, error) {
-	content, err := os.ReadFile(filePath)
-	if err != nil {
-		return MigrationFile{}, err
-	}
-
-	contentStr := string(content)
-	parts := strings.Split(contentStr, "-- +migrate Down")
-
-	if len(parts) != 2 {
-		return MigrationFile{}, fmt.Errorf("migration file must contain both up and down sections separated by '-- +migrate Down'")
-	}
-
-	upSQL := strings.TrimSpace(strings.TrimPrefix(parts[0], "-- +migrate Up"))
-	downSQL := strings.TrimSpace(parts[1])
-
-	fileName := filepath.Base(filePath)
-	migrationName := strings.TrimSuffix(fileName, ".sql")
-
-	return MigrationFile{
-		Name:     migrationName,
-		FilePath: filePath,
-		UpSQL:    upSQL,
-		DownSQL:  downSQL,
+	return &MigrationManager{
+		migrate: m,
+		db:      db,
 	}, nil
 }
 
 func (m *MigrationManager) RunMigrations() error {
-	pending, err := m.GetPendingMigrations()
-	if err != nil {
-		return err
+	err := m.migrate.Up()
+	if err != nil && err != migrate.ErrNoChange {
+		return fmt.Errorf("failed to run migrations: %w", err)
 	}
 
-	if len(pending) == 0 {
+	if err == migrate.ErrNoChange {
 		log.Println("No pending migrations to run")
-		return nil
+	} else {
+		log.Println("All migrations completed successfully")
 	}
 
-	// Get next batch number
-	var lastBatch int
-	m.db.Model(&Migration{}).Select("COALESCE(MAX(batch), 0)").Scan(&lastBatch)
-	nextBatch := lastBatch + 1
-
-	log.Printf("Running %d pending migrations...", len(pending))
-
-	for _, migration := range pending {
-		log.Printf("Running migration: %s", migration.Name)
-
-		if err := m.executeMigration(migration, nextBatch); err != nil {
-			return fmt.Errorf("failed to execute migration %s: %w", migration.Name, err)
-		}
-
-		log.Printf("Migration %s completed successfully", migration.Name)
-	}
-
-	log.Println("All migrations completed successfully")
 	return nil
 }
 
-func (m *MigrationManager) executeMigration(migration MigrationFile, batch int) error {
-	// Execute migration in transaction
-	return m.db.Transaction(func(tx *gorm.DB) error {
-		// Execute the SQL
-		sqlDB, err := tx.DB()
-		if err != nil {
-			return err
-		}
-
-		if _, err := sqlDB.Exec(migration.UpSQL); err != nil {
-			return fmt.Errorf("failed to execute migration SQL: %w", err)
-		}
-
-		// Record migration
-		migrationRecord := Migration{
-			Name:  migration.Name,
-			Batch: batch,
-		}
-
-		if err := tx.Create(&migrationRecord).Error; err != nil {
-			return fmt.Errorf("failed to record migration: %w", err)
-		}
-
-		return nil
-	})
-}
-
-func (m *MigrationManager) RollbackLastBatch() error {
-	// Get last batch
-	var lastBatch int
-	if err := m.db.Model(&Migration{}).Select("MAX(batch)").Scan(&lastBatch).Error; err != nil {
-		return err
+func (m *MigrationManager) RollbackLastMigration() error {
+	err := m.migrate.Steps(-1)
+	if err != nil && err != migrate.ErrNoChange {
+		return fmt.Errorf("failed to rollback migration: %w", err)
 	}
 
-	if lastBatch == 0 {
+	if err == migrate.ErrNoChange {
 		log.Println("No migrations to rollback")
-		return nil
+	} else {
+		log.Println("Migration rolled back successfully")
 	}
 
-	// Get migrations from last batch
-	var migrations []Migration
-	if err := m.db.Where("batch = ?", lastBatch).Order("executed_at DESC").Find(&migrations).Error; err != nil {
-		return err
-	}
-
-	log.Printf("Rolling back %d migrations from batch %d...", len(migrations), lastBatch)
-
-	for _, migration := range migrations {
-		log.Printf("Rolling back migration: %s", migration.Name)
-
-		if err := m.rollbackMigration(migration); err != nil {
-			return fmt.Errorf("failed to rollback migration %s: %w", migration.Name, err)
-		}
-
-		log.Printf("Migration %s rolled back successfully", migration.Name)
-	}
-
-	log.Println("Rollback completed successfully")
 	return nil
 }
 
-func (m *MigrationManager) rollbackMigration(migration Migration) error {
-	// Load migration file to get down SQL
-	migrationFiles, err := m.loadMigrationFiles()
-	if err != nil {
-		return err
+func (m *MigrationManager) RollbackToVersion(version uint) error {
+	err := m.migrate.Migrate(version)
+	if err != nil && err != migrate.ErrNoChange {
+		return fmt.Errorf("failed to migrate to version %d: %w", version, err)
 	}
 
-	var migrationFile *MigrationFile
-	for _, file := range migrationFiles {
-		if file.Name == migration.Name {
-			migrationFile = &file
-			break
-		}
+	if err == migrate.ErrNoChange {
+		log.Printf("Already at version %d", version)
+	} else {
+		log.Printf("Migrated to version %d successfully", version)
 	}
 
-	if migrationFile == nil {
-		return fmt.Errorf("migration file not found for: %s", migration.Name)
-	}
-
-	// Execute rollback in transaction
-	return m.db.Transaction(func(tx *gorm.DB) error {
-		// Execute the down SQL
-		sqlDB, err := tx.DB()
-		if err != nil {
-			return err
-		}
-
-		if _, err := sqlDB.Exec(migrationFile.DownSQL); err != nil {
-			return fmt.Errorf("failed to execute rollback SQL: %w", err)
-		}
-
-		// Remove migration record
-		if err := tx.Delete(&migration).Error; err != nil {
-			return fmt.Errorf("failed to remove migration record: %w", err)
-		}
-
-		return nil
-	})
+	return nil
 }
 
 func (m *MigrationManager) GetMigrationStatus() error {
-	executed, err := m.GetExecutedMigrations()
-	if err != nil {
-		return err
-	}
-
-	pending, err := m.GetPendingMigrations()
-	if err != nil {
-		return err
+	version, dirty, err := m.migrate.Version()
+	if err != nil && err != migrate.ErrNilVersion {
+		return fmt.Errorf("failed to get migration version: %w", err)
 	}
 
 	fmt.Println("Migration Status:")
 	fmt.Println("================")
 
-	if len(executed) > 0 {
-		fmt.Println("\nExecuted migrations:")
-		for _, name := range executed {
-			fmt.Printf("  ✓ %s\n", name)
+	if err == migrate.ErrNilVersion {
+		fmt.Println("No migrations have been applied")
+	} else {
+		fmt.Printf("Current version: %d\n", version)
+		if dirty {
+			fmt.Println("State: DIRTY (migration failed or was interrupted)")
+			fmt.Println("⚠️  Please fix the dirty state before running new migrations")
+		} else {
+			fmt.Println("State: CLEAN")
 		}
 	}
 
-	if len(pending) > 0 {
-		fmt.Println("\nPending migrations:")
-		for _, migration := range pending {
-			fmt.Printf("  ⏳ %s\n", migration.Name)
-		}
-	} else {
-		fmt.Println("\nNo pending migrations")
+	// List available migrations
+	if err := m.listAvailableMigrations(); err != nil {
+		log.Printf("Warning: Failed to list available migrations: %v", err)
 	}
 
 	return nil
 }
 
-func (m *MigrationManager) Close() error {
-	sqlDB, err := m.db.DB()
+func (m *MigrationManager) listAvailableMigrations() error {
+	migrationsDir := "database/migrations"
+	files, err := os.ReadDir(migrationsDir)
 	if err != nil {
 		return err
 	}
-	return sqlDB.Close()
+
+	upMigrations := make(map[string]bool)
+	for _, file := range files {
+		if strings.HasSuffix(file.Name(), ".up.sql") {
+			migrationName := strings.TrimSuffix(file.Name(), ".up.sql")
+			upMigrations[migrationName] = true
+		}
+	}
+
+	if len(upMigrations) > 0 {
+		fmt.Println("\nAvailable migrations:")
+		for migration := range upMigrations {
+			fmt.Printf("  📄 %s\n", migration)
+		}
+	}
+
+	return nil
+}
+
+func (m *MigrationManager) Force(version int) error {
+	err := m.migrate.Force(version)
+	if err != nil {
+		return fmt.Errorf("failed to force version %d: %w", version, err)
+	}
+
+	log.Printf("Forced migration to version %d", version)
+	return nil
+}
+
+func (m *MigrationManager) Drop() error {
+	err := m.migrate.Drop()
+	if err != nil {
+		return fmt.Errorf("failed to drop database: %w", err)
+	}
+
+	log.Println("Database dropped successfully")
+	return nil
+}
+
+func (m *MigrationManager) Close() error {
+	if m.migrate != nil {
+		if sourceErr, dbErr := m.migrate.Close(); sourceErr != nil || dbErr != nil {
+			return fmt.Errorf("failed to close migrate instance: source=%v, db=%v", sourceErr, dbErr)
+		}
+	}
+
+	if m.db != nil {
+		return m.db.Close()
+	}
+
+	return nil
+}
+
+// CreateMigration creates a new migration file pair (.up.sql and .down.sql)
+func CreateMigration(name string) error {
+	if name == "" {
+		return fmt.Errorf("migration name is required")
+	}
+
+	// Create migrations directory if it doesn't exist
+	migrationsDir := "database/migrations"
+	if err := os.MkdirAll(migrationsDir, 0755); err != nil {
+		return fmt.Errorf("failed to create migrations directory: %w", err)
+	}
+
+	// Generate timestamp
+	timestamp := time.Now().Format("20060102150405")
+
+	// Clean migration name (replace spaces with underscores, remove special chars)
+	cleanName := strings.ReplaceAll(name, " ", "_")
+	cleanName = strings.ToLower(cleanName)
+
+	// Create filenames
+	upFilename := fmt.Sprintf("%s_%s.up.sql", timestamp, cleanName)
+	downFilename := fmt.Sprintf("%s_%s.down.sql", timestamp, cleanName)
+
+	upFilepath := filepath.Join(migrationsDir, upFilename)
+	downFilepath := filepath.Join(migrationsDir, downFilename)
+
+	// Create UP migration file template
+	upTemplate := `-- Write your UP migration here
+-- Example:
+-- CREATE TABLE example (
+--     id SERIAL PRIMARY KEY,
+--     name VARCHAR(255) NOT NULL,
+--     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+-- );
+`
+
+	// Create DOWN migration file template
+	downTemplate := `-- Write your DOWN migration here
+-- Example:
+-- DROP TABLE IF EXISTS example;
+`
+
+	// Write UP migration file
+	if err := os.WriteFile(upFilepath, []byte(upTemplate), 0644); err != nil {
+		return fmt.Errorf("failed to create UP migration file: %w", err)
+	}
+
+	// Write DOWN migration file
+	if err := os.WriteFile(downFilepath, []byte(downTemplate), 0644); err != nil {
+		return fmt.Errorf("failed to create DOWN migration file: %w", err)
+	}
+
+	fmt.Printf("Migration files created:\n")
+	fmt.Printf("  📝 %s\n", upFilepath)
+	fmt.Printf("  📝 %s\n", downFilepath)
+	fmt.Println("Please edit the files to add your migration SQL")
+
+	return nil
 }

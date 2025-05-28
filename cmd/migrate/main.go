@@ -6,9 +6,7 @@ import (
 	"go-api/database/migration"
 	"log"
 	"os"
-	"path/filepath"
-	"strings"
-	"time"
+	"strconv"
 )
 
 func main() {
@@ -22,9 +20,9 @@ func main() {
 
 	command := os.Args[1]
 	switch command {
-	case "migrate":
+	case "migrate", "up":
 		runMigrations()
-	case "rollback":
+	case "rollback", "down":
 		rollbackMigrations()
 	case "status":
 		showStatus()
@@ -33,6 +31,13 @@ func main() {
 			log.Fatal("Migration name is required. Usage: go run cmd/migrate/main.go create \"migration_name\"")
 		}
 		createMigration(os.Args[2])
+	case "force":
+		if len(os.Args) < 3 {
+			log.Fatal("Version is required. Usage: go run cmd/migrate/main.go force <version>")
+		}
+		forceVersion(os.Args[2])
+	case "drop":
+		dropDatabase()
 	case "help", "--help", "-h":
 		showUsage()
 	default:
@@ -60,8 +65,20 @@ func rollbackMigrations() {
 	}
 	defer manager.Close()
 
-	if err := manager.RollbackLastBatch(); err != nil {
-		log.Fatalf("Failed to rollback migrations: %v", err)
+	// Check if user wants to rollback to a specific version
+	if len(os.Args) > 2 {
+		switch os.Args[2] {
+		case "last", "1":
+			if err := manager.RollbackLastMigration(); err != nil {
+				log.Fatalf("Failed to rollback last migration: %v", err)
+			}
+		default:
+			log.Fatal("Usage: go run cmd/migrate/main.go rollback [last|1]")
+		}
+	} else {
+		if err := manager.RollbackLastMigration(); err != nil {
+			log.Fatalf("Failed to rollback last migration: %v", err)
+		}
 	}
 }
 
@@ -78,71 +95,78 @@ func showStatus() {
 }
 
 func createMigration(name string) {
-	if name == "" {
-		log.Fatal("Migration name is required. Use -name flag")
+	if err := migration.CreateMigration(name); err != nil {
+		log.Fatalf("Failed to create migration: %v", err)
+	}
+}
+
+func forceVersion(versionStr string) {
+	// Import strconv for string to int conversion
+	version := 0
+	if versionStr != "0" {
+		var err error
+		version, err = strconv.Atoi(versionStr)
+		if err != nil {
+			log.Fatalf("Invalid version number: %v", err)
+		}
 	}
 
-	// Create migrations directory if it doesn't exist
-	migrationsDir := "database/migrations"
-	if err := os.MkdirAll(migrationsDir, 0755); err != nil {
-		log.Fatalf("Failed to create migrations directory: %v", err)
+	manager, err := migration.NewMigrationManager()
+	if err != nil {
+		log.Fatalf("Failed to create migration manager: %v", err)
+	}
+	defer manager.Close()
+
+	if err := manager.Force(version); err != nil {
+		log.Fatalf("Failed to force version: %v", err)
+	}
+}
+
+func dropDatabase() {
+	fmt.Print("⚠️  This will drop all tables in the database. Are you sure? (y/N): ")
+	var response string
+	fmt.Scanln(&response)
+
+	if response != "y" && response != "Y" && response != "yes" && response != "YES" {
+		fmt.Println("Operation cancelled")
+		return
 	}
 
-	// Generate timestamp
-	timestamp := time.Now().Format("20060102150405")
-
-	// Clean migration name (replace spaces with underscores, remove special chars)
-	cleanName := strings.ReplaceAll(name, " ", "_")
-	cleanName = strings.ToLower(cleanName)
-
-	// Create filename
-	filename := fmt.Sprintf("%s_%s.sql", timestamp, cleanName)
-	filepath := filepath.Join(migrationsDir, filename)
-
-	// Create migration file template
-	template := `-- +migrate Up
--- Write your UP migration here
--- Example:
--- CREATE TABLE example (
---     id SERIAL PRIMARY KEY,
---     name VARCHAR(255) NOT NULL,
---     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
--- );
-
--- +migrate Down
--- Write your DOWN migration here
--- Example:
--- DROP TABLE IF EXISTS example;
-`
-
-	if err := os.WriteFile(filepath, []byte(template), 0644); err != nil {
-		log.Fatalf("Failed to create migration file: %v", err)
+	manager, err := migration.NewMigrationManager()
+	if err != nil {
+		log.Fatalf("Failed to create migration manager: %v", err)
 	}
+	defer manager.Close()
 
-	fmt.Printf("Migration file created: %s\n", filepath)
-	fmt.Println("Please edit the file to add your migration SQL")
+	if err := manager.Drop(); err != nil {
+		log.Fatalf("Failed to drop database: %v", err)
+	}
 }
 
 func showUsage() {
-	fmt.Println("Database Migration Tool")
-	fmt.Println("=======================")
+	fmt.Println("Database Migration Tool (golang-migrate)")
+	fmt.Println("========================================")
 	fmt.Println()
 	fmt.Println("Usage:")
-	fmt.Println("  go run cmd/migrate/main.go create \"migration_name\"")
-	fmt.Println("  go run cmd/migrate/main.go migrate")
-	fmt.Println("  go run cmd/migrate/main.go rollback")
-	fmt.Println("  go run cmd/migrate/main.go status")
+	fmt.Println("  go run cmd/migrate/main.go <command> [arguments]")
 	fmt.Println()
 	fmt.Println("Commands:")
-	fmt.Println("  create <name> - Create a new migration file")
-	fmt.Println("  migrate       - Run all pending migrations")
-	fmt.Println("  rollback      - Rollback the last batch of migrations")
-	fmt.Println("  status        - Show migration status")
-	fmt.Println("  help          - Show this help message")
+	fmt.Println("  create <name>  - Create a new migration file pair (.up.sql and .down.sql)")
+	fmt.Println("  migrate/up     - Run all pending migrations")
+	fmt.Println("  rollback/down  - Rollback the last migration")
+	fmt.Println("  status         - Show current migration status")
+	fmt.Println("  force <version>- Force set the migration version (use with caution)")
+	fmt.Println("  drop           - Drop all tables (DANGEROUS - requires confirmation)")
+	fmt.Println("  help           - Show this help message")
 	fmt.Println()
 	fmt.Println("Examples:")
 	fmt.Println("  go run cmd/migrate/main.go create \"create_users_table\"")
 	fmt.Println("  go run cmd/migrate/main.go migrate")
 	fmt.Println("  go run cmd/migrate/main.go rollback")
 	fmt.Println("  go run cmd/migrate/main.go status")
+	fmt.Println("  go run cmd/migrate/main.go force 3")
+	fmt.Println("  go run cmd/migrate/main.go drop")
+	fmt.Println()
+	fmt.Println("Note: Migration files are now in separate .up.sql and .down.sql files")
+	fmt.Println("      This follows the golang-migrate library standard")
 }
