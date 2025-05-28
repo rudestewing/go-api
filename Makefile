@@ -35,7 +35,15 @@ clean:
 
 # Development with hot reload
 dev:
-	air
+	@echo "Starting development server with hot reload..."
+	@mkdir -p tmp
+	@air
+
+# Alternative development command with more verbose output
+dev-verbose:
+	@echo "Starting development server with hot reload (verbose)..."
+	@mkdir -p tmp
+	@air -d
 
 # Migration commands
 migrate-create:

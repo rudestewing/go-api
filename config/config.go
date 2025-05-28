@@ -20,6 +20,10 @@ type Config struct {
 	DBMaxIdleConns int
 	DBMaxOpenConns int
 	DBMaxLifetime  time.Duration
+	// Server timeout configurations
+	ReadTimeout  time.Duration
+	WriteTimeout time.Duration
+	IdleTimeout  time.Duration
 }
 
 var GlobalConfig *Config
@@ -42,6 +46,10 @@ func InitConfig() {
 		DBMaxIdleConns: getEnvAsInt("DB_MAX_IDLE_CONNS", 10),
 		DBMaxOpenConns: getEnvAsInt("DB_MAX_OPEN_CONNS", 100),
 		DBMaxLifetime:  getEnvAsDuration("DB_MAX_LIFETIME", time.Hour),
+		// Server timeout configurations
+		ReadTimeout:  getEnvAsDuration("READ_TIMEOUT", time.Second*30),
+		WriteTimeout: getEnvAsDuration("WRITE_TIMEOUT", time.Second*30),
+		IdleTimeout:  getEnvAsDuration("IDLE_TIMEOUT", time.Second*120),
 	}
 
 	log.Println("Configuration loaded successfully")

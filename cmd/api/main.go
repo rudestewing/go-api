@@ -13,7 +13,12 @@ import (
 )
 
 func createFiberApp() *fiber.App {
+	cfg := config.Get()
+
 	app := fiber.New(fiber.Config{
+		ReadTimeout:  cfg.ReadTimeout,
+		WriteTimeout: cfg.WriteTimeout,
+		IdleTimeout:  cfg.IdleTimeout,
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
 			code := fiber.StatusInternalServerError
 			if e, ok := err.(*fiber.Error); ok {
@@ -48,9 +53,9 @@ func main() {
 
 	cfg := config.Get()
 	port := ":" + cfg.AppPort
-	log.Printf("Server starting on port %s...", cfg.AppPort)
+	log.Printf("🚀 Server starting on port %s...", cfg.AppPort)
 
 	if err := app.Listen(port); err != nil {
-		log.Printf("Server error: %v", err)
+		log.Fatalf("Server error: %v", err)
 	}
 }
