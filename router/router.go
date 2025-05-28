@@ -15,13 +15,14 @@ func RegisterRoutes(app *fiber.App, container *container.Container) {
 		return response.SuccessWithMessage(c, "hello from v1", "API is running")
 	})
 
+	authHandler := handler.NewAuthHandler(container.AuthService)
 	// Auth routes (public)
 	auth := v1.Group("/auth")
-	auth.Post("/login", container.AuthHandler.Login)
-	auth.Post("/register", container.AuthHandler.Register)
+	auth.Post("/login", authHandler.Login)
+	auth.Post("/register", authHandler.Register)
 
 	// Protected routes
-	userHandler := handler.NewUserHandler()
+	userHandler := handler.NewUserHandler(container.UserService)
 	protected := v1.Group("/user")
 	protected.Use(middleware.JWTAuthMiddleware())
 	protected.Get("/profile", userHandler.GetProfile)

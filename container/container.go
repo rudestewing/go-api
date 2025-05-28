@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"go-api/config"
-	"go-api/internal/handler"
 	"go-api/internal/repository"
 	"go-api/internal/service"
 	"log"
@@ -16,9 +15,8 @@ import (
 type Container struct {
 	Config      *config.Config
 	DB          *gorm.DB
-	UserRepo    *repository.UserRepository
 	AuthService *service.AuthService
-	AuthHandler *handler.AuthHandler
+	UserService *service.UserService
 }
 
 func initDB() (*gorm.DB, error) {
@@ -64,19 +62,17 @@ func NewContainer() (*Container, error) {
 
 	// Initialize repositories
 	userRepo := repository.NewUserRepository(db)
+	roleRepo := repository.NewRoleRepository(db)
 
 	// Initialize services
-	authService := service.NewAuthService(userRepo)
-
-	// Initialize handlers
-	authHandler := handler.NewAuthHandler(authService)
+	authService := service.NewAuthService(userRepo, roleRepo)
+	userService := service.NewUserService(userRepo)
 
 	container := &Container{
 		Config:      cfg,
 		DB:          db,
-		UserRepo:    userRepo,
 		AuthService: authService,
-		AuthHandler: authHandler,
+		UserService: userService,
 	}
 
 	return container, nil
