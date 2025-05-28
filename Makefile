@@ -21,10 +21,10 @@ help:
 
 # Application commands
 run:
-	go run main.go
+	go run cmd/api/main.go
 
 build:
-	go build -o tmp/main main.go
+	go build -o tmp/main cmd/api/main.go
 
 test:
 	go test ./...
@@ -61,5 +61,5 @@ migrate-help:
 # Clean up temporary files
 clean-migrations:
 	@echo "Cleaning up temporary migration files..."
-	@find migrations/ -name "*.tmp" -delete 2>/dev/null || true
+	@find database/migrations/ -name "*.tmp" -delete 2>/dev/null || true
 	@echo "Done."

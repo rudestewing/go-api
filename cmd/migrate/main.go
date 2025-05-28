@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"go-api/config"
-	"go-api/internal/migration"
+	"go-api/database/migration"
 	"log"
 	"os"
 	"path/filepath"
@@ -83,7 +83,7 @@ func createMigration(name string) {
 	}
 
 	// Create migrations directory if it doesn't exist
-	migrationsDir := "migrations"
+	migrationsDir := "database/migrations"
 	if err := os.MkdirAll(migrationsDir, 0755); err != nil {
 		log.Fatalf("Failed to create migrations directory: %v", err)
 	}

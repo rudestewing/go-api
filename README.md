@@ -57,7 +57,9 @@ go-api/
 │   ├── model/           # Database models
 │   ├── repository/      # Data access layer
 │   └── service/         # Business logic layer
-├── migrations/          # SQL migration files
+├── database/           # Database related files
+│   ├── migration/      # Migration management
+│   └── migrations/     # SQL migration files
 ├── router/             # Route definitions
 ├── tmp/               # Build artifacts
 ├── .env.example       # Environment variables template
