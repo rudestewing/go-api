@@ -41,7 +41,8 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 		return response.Unauthorized(c, err.Error())
 	}
 
-		return response.Success(c, fiber.Map{
+
+	return response.Success(c, fiber.Map{
 		"token": token,
 	})
 }

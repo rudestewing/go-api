@@ -40,10 +40,6 @@ go.work.sum
 ehthumbs.db
 Thumbs.db
 
-# Logs
-*.log
-logs/
-
 # Database
 *.db
 *.sqlite

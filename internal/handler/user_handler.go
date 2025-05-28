@@ -3,7 +3,6 @@ package handler
 import (
 	"go-api/internal/service"
 	"go-api/shared/response"
-	"log"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -21,8 +20,6 @@ func NewUserHandler(userService *service.UserService) *UserHandler {
 // GetProfile menampilkan profil user saat ini
 func (h *UserHandler) GetProfile(c *fiber.Ctx) error {
 	ctx := c.UserContext()
-
-	log.Printf("User ID from context: %v", ctx.Value("user_id"))
 
 	userData := fiber.Map{
 		"user": ctx.Value("user_id"),

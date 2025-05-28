@@ -3,12 +3,13 @@ package main
 import (
 	"go-api/config"
 	"go-api/container"
+	"go-api/internal/logger"
 	"go-api/router"
 	"log"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
-	"github.com/gofiber/fiber/v2/middleware/logger"
+	fiberLogger "github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 )
 
@@ -24,6 +25,11 @@ func createFiberApp() *fiber.App {
 			if e, ok := err.(*fiber.Error); ok {
 				code = e.Code
 			}
+
+			// Log error to file
+			logger.LogError("Fiber error: %s | Path: %s | Method: %s | IP: %s",
+				err.Error(), c.Path(), c.Method(), c.IP())
+
 			return c.Status(code).JSON(fiber.Map{
 				"error": err.Error(),
 			})
@@ -32,7 +38,19 @@ func createFiberApp() *fiber.App {
 
 	// Middleware
 	app.Use(recover.New())
-	app.Use(logger.New())
+
+	// Setup logger configuration from config
+	loggerConfig := logger.LoggerConfig{
+		LogDir:      cfg.LogDir,
+		MaxSize:     cfg.LogMaxSize,
+		MaxAge:      cfg.LogMaxAge,
+		EnableDaily: cfg.EnableDailyLog,
+	}
+
+	// Use custom Fiber logger with file output
+	fiberLoggerConfig := logger.GetFiberLoggerConfig(loggerConfig)
+	app.Use(fiberLogger.New(fiberLoggerConfig))
+
 	app.Use(cors.New())
 
 	return app
@@ -42,20 +60,39 @@ func main() {
 	// Initialize config first
 	config.InitConfig()
 
+	// Initialize logger
+	cfg := config.Get()
+	loggerConfig := logger.LoggerConfig{
+		LogDir:      cfg.LogDir,
+		MaxSize:     cfg.LogMaxSize,
+		MaxAge:      cfg.LogMaxAge,
+		EnableDaily: cfg.EnableDailyLog,
+	}
+
+	if err := logger.InitLogger(loggerConfig); err != nil {
+		log.Fatalf("Failed to initialize logger: %v", err)
+	}
+
+	// Clean up old logs on startup
+	if err := logger.CleanupOldLogs(loggerConfig); err != nil {
+		logger.LogWarning("Failed to cleanup old logs: %v", err)
+	}
+
+	logger.LogInfo("Starting application...")
+
 	app := createFiberApp()
 
 	container, err := container.NewContainer()
 	if err != nil {
-		log.Fatal("Failed to create container:", err)
+		logger.LogFatal("Failed to create container: %v", err)
 	}
 
 	router.RegisterRoutes(app, container)
 
-	cfg := config.Get()
 	port := ":" + cfg.AppPort
-	log.Printf("🚀 Server starting on port %s...", cfg.AppPort)
+	logger.LogInfo("🚀 Server starting on port %s...", cfg.AppPort)
 
 	if err := app.Listen(port); err != nil {
-		log.Fatalf("Server error: %v", err)
+		logger.LogFatal("Server error: %v", err)
 	}
 }
