@@ -5,23 +5,20 @@ import (
 )
 
 // Success sends a successful response
-func Success(c *fiber.Ctx, data interface{}) error {
-	return c.JSON(fiber.Map{
-		"data":    data,
-		"message": "Success",
-	})
-}
+func Success(c *fiber.Ctx, data any, message ...string) error {
+	msg := "success"
+	if len(message) > 0 {
+		msg = message[0]
+	}
 
-// SuccessWithMessage sends a successful response with custom message
-func SuccessWithMessage(c *fiber.Ctx, data interface{}, message string) error {
 	return c.JSON(fiber.Map{
 		"data":    data,
-		"message": message,
+		"message": msg,
 	})
 }
 
 // Created sends a created response
-func Created(c *fiber.Ctx, data interface{}) error {
+func Created(c *fiber.Ctx, data any) error {
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
 		"data":    data,
 		"message": "Created successfully",

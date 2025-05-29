@@ -73,5 +73,5 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 		return response.InternalError(c, err.Error())
 	}
 
-	return response.SuccessWithMessage(c, nil, "User registered successfully")
+	return response.Success(c, nil, "User registered successfully")
 }

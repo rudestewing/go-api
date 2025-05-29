@@ -3,6 +3,7 @@ package main
 import (
 	"go-api/config"
 	"go-api/container"
+	"go-api/internal/handler"
 	"go-api/internal/logger"
 	"go-api/router"
 	"log"
@@ -80,18 +81,25 @@ func main() {
 
 	logger.LogInfo("Starting application...")
 
+	// Initialize Fiber App
 	app := createFiberApp()
 
-	container, err := container.NewContainer()
-	if err != nil {
-		logger.LogFatal("Failed to create container: %v", err)
+	// Initialize App Container
+	container, err_container := container.NewContainer()
+	if err_container != nil {
+		logger.LogFatal("Failed to create container: %v", err_container)
 	}
 
-	router.RegisterRoutes(app, container)
+	// Initialize Handler
+	handler := handler.NewHandler(container)
+
+	// Setup Routes
+	router.RegisterRoutes(app, handler)
 
 	port := ":" + cfg.AppPort
 	logger.LogInfo("🚀 Server starting on port %s...", cfg.AppPort)
 
+	// Serve App
 	if err := app.Listen(port); err != nil {
 		logger.LogFatal("Server error: %v", err)
 	}

@@ -14,7 +14,7 @@ func init() {
 }
 
 // ValidateStruct validates a struct and returns formatted error messages
-func ValidateStruct(s interface{}) error {
+func ValidateStruct(s any) error {
 	if err := validate.Struct(s); err != nil {
 		var validationErrors []string
 

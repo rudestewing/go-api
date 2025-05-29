@@ -90,27 +90,27 @@ func GetFiberLoggerConfig(config LoggerConfig) logger.Config {
 }
 
 // LogInfo logs info level messages
-func LogInfo(message string, args ...interface{}) {
+func LogInfo(message string, args ...any) {
 	log.Printf("[INFO] "+message, args...)
 }
 
 // LogError logs error level messages
-func LogError(message string, args ...interface{}) {
+func LogError(message string, args ...any) {
 	log.Printf("[ERROR] "+message, args...)
 }
 
 // LogWarning logs warning level messages
-func LogWarning(message string, args ...interface{}) {
+func LogWarning(message string, args ...any) {
 	log.Printf("[WARNING] "+message, args...)
 }
 
 // LogDebug logs debug level messages
-func LogDebug(message string, args ...interface{}) {
+func LogDebug(message string, args ...any) {
 	log.Printf("[DEBUG] "+message, args...)
 }
 
 // LogFatal logs fatal level messages and exits
-func LogFatal(message string, args ...interface{}) {
+func LogFatal(message string, args ...any) {
 	log.Fatalf("[FATAL] "+message, args...)
 }
 
