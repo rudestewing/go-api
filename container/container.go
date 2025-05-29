@@ -3,10 +3,10 @@ package container
 import (
 	"context"
 	"fmt"
+	"go-api/app/repository"
+	"go-api/app/service"
 	"go-api/config"
 	"go-api/database"
-	"go-api/internal/repository"
-	"go-api/internal/service"
 	"log"
 
 	"gorm.io/gorm"
