@@ -1,6 +1,6 @@
 # Makefile for Go API Project
 
-.PHONY: help run build test clean migrate-create migrate-up migrate-down migrate-status dev
+.PHONY: help run build test clean migrate-create migrate-up migrate-down migrate-status migrate-help seed-create seed-run seed-help dev
 
 # Default target
 help:
@@ -15,6 +15,12 @@ help:
 	@echo "  make migrate-up                            - Run all pending migrations"
 	@echo "  make migrate-down                          - Rollback last batch of migrations"
 	@echo "  make migrate-status                        - Show migration status"
+	@echo "  make migrate-help                          - Show migration help"
+	@echo ""
+	@echo "Seeder commands:"
+	@echo "  make seed-create name=\"seeder_name\"       - Create a new seeder"
+	@echo "  make seed-run path=\"path/to/seeder.go\"    - Run a specific seeder file"
+	@echo "  make seed-help                             - Show seeder help"
 	@echo ""
 	@echo "Development:"
 	@echo "  make dev              - Start development server with hot reload"
@@ -65,6 +71,26 @@ migrate-status:
 
 migrate-help:
 	go run cmd/migrate/main.go help
+
+# Seeder commands
+seed-create:
+ifndef name
+	@echo "Error: name parameter is required"
+	@echo "Usage: make seed-create name=\"seeder_name\""
+	@exit 1
+endif
+	go run cmd/seed/main.go create "$(name)"
+
+seed-run:
+ifndef path
+	@echo "Error: path parameter is required"
+	@echo "Usage: make seed-run path=\"database/seeders/20250529000000_roles.go\""
+	@exit 1
+endif
+	go run cmd/seed/main.go run "$(path)"
+
+seed-help:
+	go run cmd/seed/main.go help
 
 # Clean up temporary files
 clean-migrations:
