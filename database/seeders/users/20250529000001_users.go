@@ -6,6 +6,7 @@ import (
 	"go-api/database"
 	"log"
 
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
@@ -30,18 +31,25 @@ func main() {
 func runUsers(db *gorm.DB) error {
 	log.Printf("Running users seeder...")
 
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte("12345"), bcrypt.DefaultCost)
+
+	if err != nil {
+		log.Fatal("Failed to hash password:", err)
+	}
+
+
 	// Example users data
 	users := []model.User{
 		{
 			Name:     "Admin User",
 			Email:    "admin@example.com",
-			Password: "$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi", // password
+			Password: string(hashedPassword),
 			RoleID:   1, // Assuming admin role
 		},
 		{
 			Name:     "Regular User",
 			Email:    "user@example.com",
-			Password: "$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi", // password
+			Password: string(hashedPassword),
 			RoleID:   2, // Assuming user role
 		},
 	}

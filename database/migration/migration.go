@@ -190,6 +190,81 @@ func (m *MigrationManager) Drop() error {
 	return nil
 }
 
+// Fresh drops all tables and re-runs all migrations from the beginning
+func (m *MigrationManager) Fresh() error {
+	log.Println("Starting fresh migration...")
+
+	// First, drop all tables
+	if err := m.migrate.Drop(); err != nil {
+		return fmt.Errorf("failed to drop database during fresh: %w", err)
+	}
+	log.Println("All tables dropped")
+
+	// After dropping all tables, we need to create a new migration instance
+	// because the schema_migrations table was also dropped
+	freshManager, err := NewMigrationManager()
+	if err != nil {
+		return fmt.Errorf("failed to create fresh migration manager: %w", err)
+	}
+	defer freshManager.Close()
+
+	// Run all migrations from the beginning with the fresh manager
+	if err := freshManager.migrate.Up(); err != nil && err != migrate.ErrNoChange {
+		return fmt.Errorf("failed to run migrations during fresh: %w", err)
+	}
+
+	log.Println("Fresh migration completed successfully - all migrations re-run from beginning")
+	return nil
+}
+
+// Purge rolls back all executed migrations to version 0
+func (m *MigrationManager) Purge() error {
+	log.Println("Starting migration purge...")
+
+	// Get current version
+	version, dirty, err := m.migrate.Version()
+	if err != nil && err != migrate.ErrNilVersion {
+		return fmt.Errorf("failed to get current migration version: %w", err)
+	}
+
+	if err == migrate.ErrNilVersion {
+		log.Println("No migrations to purge - database is already at version 0")
+		return nil
+	}
+
+	if dirty {
+		return fmt.Errorf("cannot purge migrations: database is in dirty state (version %d). Please fix the dirty state first using 'force' command", version)
+	}
+
+	initialVersion := version
+	log.Printf("Starting purge from version %d", initialVersion)
+
+	// Roll back all migrations one by one until we reach version 0
+	for {
+		currentVersion, _, err := m.migrate.Version()
+		if err == migrate.ErrNilVersion {
+			// We've successfully rolled back all migrations
+			break
+		}
+		if err != nil {
+			return fmt.Errorf("failed to get current version during purge: %w", err)
+		}
+
+		// Perform one step rollback
+		log.Printf("Rolling back from version %d...", currentVersion)
+		if err := m.migrate.Steps(-1); err != nil {
+			if err == migrate.ErrNoChange {
+				// No more migrations to rollback
+				break
+			}
+			return fmt.Errorf("failed to rollback step during purge: %w", err)
+		}
+	}
+
+	log.Printf("Migration purge completed - rolled back from version %d to version 0", initialVersion)
+	return nil
+}
+
 func (m *MigrationManager) Close() error {
 	if m.migrate != nil {
 		if sourceErr, dbErr := m.migrate.Close(); sourceErr != nil || dbErr != nil {

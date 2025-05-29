@@ -1,6 +1,6 @@
 # Makefile for Go API Project
 
-.PHONY: help run build test clean migrate-create migrate-up migrate-down migrate-status migrate-help seed-create seed-run seed-help dev
+.PHONY: help run build test clean migrate-create migrate-up migrate-down migrate-fresh migrate-purge migrate-status migrate-help seed-create seed-run seed-help dev
 
 # Default target
 help:
@@ -14,6 +14,8 @@ help:
 	@echo "  make migrate-create name=\"migration_name\"  - Create a new migration"
 	@echo "  make migrate-up                            - Run all pending migrations"
 	@echo "  make migrate-down                          - Rollback last batch of migrations"
+	@echo "  make migrate-fresh                         - Drop all tables and re-run all migrations"
+	@echo "  make migrate-purge                         - Rollback all executed migrations to version 0"
 	@echo "  make migrate-status                        - Show migration status"
 	@echo "  make migrate-help                          - Show migration help"
 	@echo ""
@@ -65,6 +67,12 @@ migrate-up:
 
 migrate-down:
 	go run cmd/migrate/main.go rollback
+
+migrate-fresh:
+	go run cmd/migrate/main.go fresh
+
+migrate-purge:
+	go run cmd/migrate/main.go purge
 
 migrate-status:
 	go run cmd/migrate/main.go status

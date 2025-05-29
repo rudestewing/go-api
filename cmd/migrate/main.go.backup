@@ -16,7 +16,16 @@ func main() {
 	}
 
 	// Initialize config
-	config.InitConfig()
+	config.I	fmt.Println("Commands:")
+	fmt.Println("  create <n>     - Create a new migration file pair (.up.sql and .down.sql)")
+	fmt.Println("  migrate/up     - Run all pending migrations")
+	fmt.Println("  rollback/down  - Rollback the last migration")
+	fmt.Println("  fresh          - Drop all tables and re-run all migrations from beginning")
+	fmt.Println("  purge          - Rollback all executed migrations to version 0")
+	fmt.Println("  status         - Show current migration status")
+	fmt.Println("  force <version>- Force set the migration version (use with caution)")
+	fmt.Println("  drop           - Drop all tables (DANGEROUS - requires confirmation)")
+	fmt.Println("  help           - Show this help message")g()
 
 	command := os.Args[1]
 	switch command {
@@ -197,11 +206,9 @@ func showUsage() {
 	fmt.Println("  go run cmd/migrate/main.go <command> [arguments]")
 	fmt.Println()
 	fmt.Println("Commands:")
-	fmt.Println("  create <n>     - Create a new migration file pair (.up.sql and .down.sql)")
+	fmt.Println("  create <name>  - Create a new migration file pair (.up.sql and .down.sql)")
 	fmt.Println("  migrate/up     - Run all pending migrations")
 	fmt.Println("  rollback/down  - Rollback the last migration")
-	fmt.Println("  fresh          - Drop all tables and re-run all migrations from beginning")
-	fmt.Println("  purge          - Rollback all executed migrations to version 0")
 	fmt.Println("  status         - Show current migration status")
 	fmt.Println("  force <version>- Force set the migration version (use with caution)")
 	fmt.Println("  drop           - Drop all tables (DANGEROUS - requires confirmation)")
@@ -211,19 +218,10 @@ func showUsage() {
 	fmt.Println("  go run cmd/migrate/main.go create \"create_users_table\"")
 	fmt.Println("  go run cmd/migrate/main.go migrate")
 	fmt.Println("  go run cmd/migrate/main.go rollback")
-	fmt.Println("  go run cmd/migrate/main.go fresh")
-	fmt.Println("  go run cmd/migrate/main.go purge")
 	fmt.Println("  go run cmd/migrate/main.go status")
 	fmt.Println("  go run cmd/migrate/main.go force 3")
 	fmt.Println("  go run cmd/migrate/main.go drop")
 	fmt.Println()
 	fmt.Println("Note: Migration files are now in separate .up.sql and .down.sql files")
 	fmt.Println("      This follows the golang-migrate library standard")
-	fmt.Println()
-	fmt.Println("Migration Types:")
-	fmt.Println("  - migrate/up:   Apply pending migrations sequentially")
-	fmt.Println("  - rollback:     Rollback only the last migration")
-	fmt.Println("  - fresh:        Drop all tables and re-apply all migrations (DESTRUCTIVE)")
-	fmt.Println("  - purge:        Rollback all migrations to version 0 (preserves tables)")
-	fmt.Println("  - drop:         Drop all database tables (DESTRUCTIVE)")
 }
