@@ -21,9 +21,10 @@ type Config struct {
 	DBMaxOpenConns int
 	DBMaxLifetime  time.Duration
 	// Server timeout configurations
-	ReadTimeout  time.Duration
-	WriteTimeout time.Duration
-	IdleTimeout  time.Duration
+	ReadTimeout     time.Duration
+	WriteTimeout    time.Duration
+	IdleTimeout     time.Duration
+	ShutdownTimeout time.Duration
 	// Logging configurations
 	LogDir         string
 	LogMaxSize     int64
@@ -52,9 +53,10 @@ func InitConfig() {
 		DBMaxOpenConns: getEnvAsInt("DB_MAX_OPEN_CONNS", 100),
 		DBMaxLifetime:  getEnvAsDuration("DB_MAX_LIFETIME", time.Hour),
 		// Server timeout configurations
-		ReadTimeout:  getEnvAsDuration("READ_TIMEOUT", time.Second*30),
-		WriteTimeout: getEnvAsDuration("WRITE_TIMEOUT", time.Second*30),
-		IdleTimeout:  getEnvAsDuration("IDLE_TIMEOUT", time.Second*120),
+		ReadTimeout:     getEnvAsDuration("READ_TIMEOUT", time.Second*30),
+		WriteTimeout:    getEnvAsDuration("WRITE_TIMEOUT", time.Second*30),
+		IdleTimeout:     getEnvAsDuration("IDLE_TIMEOUT", time.Second*120),
+		ShutdownTimeout: getEnvAsDuration("SHUTDOWN_TIMEOUT", time.Second*10),
 		// Logging configurations
 		LogDir:         getEnv("LOG_DIR", "storage/logs"),
 		LogMaxSize:     getEnvAsInt64("LOG_MAX_SIZE", 10*1024*1024), // 10MB

@@ -1,12 +1,16 @@
 package main
 
 import (
+	"context"
 	"go-api/config"
 	"go-api/container"
-	"go-api/internal/handler"
-	"go-api/internal/logger"
+	"go-api/handler"
+	"go-api/logger"
 	"go-api/router"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -99,8 +103,37 @@ func main() {
 	port := ":" + cfg.AppPort
 	logger.LogInfo("🚀 Server starting on port %s...", cfg.AppPort)
 
-	// Serve App
-	if err := app.Listen(port); err != nil {
-		logger.LogFatal("Server error: %v", err)
+	// Create a channel to listen for interrupt signals
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+
+	// Start server in a goroutine
+	go func() {
+		if err := app.Listen(port); err != nil {
+			logger.LogFatal("Server error: %v", err)
+		}
+	}()
+
+	logger.LogInfo("Server started successfully. Press Ctrl+C to shutdown gracefully...")
+
+	// Block until we receive an interrupt signal
+	<-c
+
+	logger.LogInfo("Shutting down server gracefully...")
+
+	// Create a deadline for the shutdown using config
+	ctx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
+	defer cancel()
+
+	// Shutdown the Fiber server
+	if err := app.ShutdownWithContext(ctx); err != nil {
+		logger.LogError("Server forced to shutdown: %v", err)
 	}
+
+	// Close container (database connections, etc.)
+	if err := container.Close(ctx); err != nil {
+		logger.LogError("Error closing container: %v", err)
+	}
+
+	logger.LogInfo("Server exited successfully")
 }

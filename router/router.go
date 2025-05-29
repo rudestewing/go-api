@@ -1,8 +1,8 @@
 package router
 
 import (
-	"go-api/internal/handler"
-	"go-api/internal/middleware"
+	"go-api/handler"
+	"go-api/middleware"
 	"go-api/shared/response"
 	"time"
 
