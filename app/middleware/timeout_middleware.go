@@ -8,7 +8,8 @@ import (
 )
 
 // TimeoutMiddleware creates a middleware that enforces a timeout on request processing
-func TimeoutMiddleware(timeout time.Duration) fiber.Handler {
+// The message parameter is optional - if empty, a default message will be used
+func TimeoutMiddleware(timeout time.Duration, message ...string) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		// Create a context with timeout
 		ctx, cancel := context.WithTimeout(c.Context(), timeout)
@@ -31,33 +32,12 @@ func TimeoutMiddleware(timeout time.Duration) fiber.Handler {
 			return err
 		case <-ctx.Done():
 			if ctx.Err() == context.DeadlineExceeded {
-				return fiber.NewError(fiber.StatusRequestTimeout, "Request timeout")
-			}
-			return ctx.Err()
-		}
-	}
-}
-
-// TimeoutMiddlewareWithCustomMessage creates a timeout middleware with a custom timeout message
-func TimeoutMiddlewareWithCustomMessage(timeout time.Duration, message string) fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		ctx, cancel := context.WithTimeout(c.Context(), timeout)
-		defer cancel()
-
-		c.SetUserContext(ctx)
-
-		done := make(chan error, 1)
-
-		go func() {
-			done <- c.Next()
-		}()
-
-		select {
-		case err := <-done:
-			return err
-		case <-ctx.Done():
-			if ctx.Err() == context.DeadlineExceeded {
-				return fiber.NewError(fiber.StatusRequestTimeout, message)
+				// Use custom message if provided, otherwise use default
+				timeoutMessage := "Request timeout"
+				if len(message) > 0 && message[0] != "" {
+					timeoutMessage = message[0]
+				}
+				return fiber.NewError(fiber.StatusRequestTimeout, timeoutMessage)
 			}
 			return ctx.Err()
 		}

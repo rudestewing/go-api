@@ -17,7 +17,7 @@ func RegisterRoutes(app *fiber.App, handler *handler.Handler) {
 	})
 
 	// Apply timeout middleware
-	v1.Use(middleware.TimeoutMiddlewareWithCustomMessage(30*time.Second, "User operation timed out"))
+	v1.Use(middleware.TimeoutMiddleware(30*time.Second, "User operation timed out"))
 
 	// Auth routes (public) - no timeout middleware for login/register
 	auth := v1.Group("/auth")
@@ -28,4 +28,8 @@ func RegisterRoutes(app *fiber.App, handler *handler.Handler) {
 	protected := v1.Group("/user")
 	protected.Use(middleware.JWTAuthMiddleware())
 	protected.Get("/profile", handler.UserHandler.GetProfile)
+
+
+	v1.Use(middleware.TimeoutMiddleware(30 * time.Second))
+	v1.Get("asynchronous", handler.AsynchronousHandler.RunAsyncTask)
 }
