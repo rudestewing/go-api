@@ -2,6 +2,7 @@ package logger
 
 import (
 	"fmt"
+	"go-api/config"
 	"io"
 	"log"
 	"os"
@@ -30,7 +31,13 @@ func DefaultConfig() LoggerConfig {
 }
 
 // InitLogger initializes the logger with file output
-func InitLogger(config LoggerConfig) error {
+func InitLogger() error {
+	cfg := config.Get()
+
+	config := LoggerConfig{
+		LogDir:      cfg.LogDir,
+		EnableDaily: cfg.EnableDailyLog,
+	}
 	// Create log directory if it doesn't exist
 	if err := os.MkdirAll(config.LogDir, 0755); err != nil {
 		return fmt.Errorf("failed to create log directory: %w", err)
@@ -115,7 +122,13 @@ func LogFatal(message string, args ...any) {
 }
 
 // CleanupOldLogs removes log files older than maxAge days
-func CleanupOldLogs(config LoggerConfig) error {
+func CleanupOldLogs() error {
+	cfg := config.Get()
+
+	config := LoggerConfig{
+		EnableDaily: cfg.EnableDailyLog,
+	}
+
 	if !config.EnableDaily {
 		return nil
 	}

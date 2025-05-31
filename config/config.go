@@ -16,6 +16,17 @@ type Config struct {
 	// Security configurations
 	JWTExpiry   time.Duration
 	Environment string
+	// CORS configurations
+	AllowedOrigins string
+	AllowedMethods string
+	AllowedHeaders string
+	// Rate limiting configurations
+	RateLimitMax        int
+	RateLimitWindow     time.Duration
+	RateLimitEnabled    bool
+	// Security configurations
+	SecurityHeadersEnabled bool
+	TrustedProxies         string
 	// Database configurations
 	DBMaxIdleConns int
 	DBMaxOpenConns int
@@ -48,6 +59,17 @@ func InitConfig() {
 		// Security configurations
 		JWTExpiry:   getEnvAsDuration("JWT_EXPIRY", time.Hour*24),
 		Environment: getEnv("ENVIRONMENT", "development"),
+		// CORS configurations
+		AllowedOrigins: getEnv("ALLOWED_ORIGINS", "http://localhost:3000"),
+		AllowedMethods: getEnv("ALLOWED_METHODS", "GET,POST,PUT,DELETE,OPTIONS"),
+		AllowedHeaders: getEnv("ALLOWED_HEADERS", "Origin,Content-Type,Accept,Authorization"),
+		// Rate limiting configurations
+		RateLimitMax:     getEnvAsInt("RATE_LIMIT_MAX", 100),
+		RateLimitWindow:  getEnvAsDuration("RATE_LIMIT_WINDOW", time.Minute),
+		RateLimitEnabled: getEnvAsBool("RATE_LIMIT_ENABLED", true),
+		// Security configurations
+		SecurityHeadersEnabled: getEnvAsBool("SECURITY_HEADERS_ENABLED", true),
+		TrustedProxies:         getEnv("TRUSTED_PROXIES", ""),
 		// Database configurations
 		DBMaxIdleConns: getEnvAsInt("DB_MAX_IDLE_CONNS", 10),
 		DBMaxOpenConns: getEnvAsInt("DB_MAX_OPEN_CONNS", 100),

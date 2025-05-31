@@ -14,15 +14,13 @@ bin/
 *.so
 *.dylib
 
-# Go build artifacts
-*.test
-*.out
-coverage.txt
-coverage.html
-
-# Go workspace files
-go.work
-go.work.sum
+# Security and sensitive files
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+ssl/
 
 # IDEs and editors
 .vscode/
@@ -48,9 +46,6 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.temp
-
-# Docker
-.dockerignore
 
 # Node modules (if you have any frontend assets)
 node_modules/
