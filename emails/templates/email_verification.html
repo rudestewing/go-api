@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Email Verification</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        line-height: 1.6;
+        color: #333;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #f4f4f4;
+      }
+      .container {
+        background-color: #ffffff;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      }
+      .header {
+        text-align: center;
+        background-color: #28a745;
+        color: white;
+        padding: 20px;
+        border-radius: 10px 10px 0 0;
+        margin: -30px -30px 30px -30px;
+      }
+      .header h1 {
+        margin: 0;
+        font-size: 24px;
+      }
+      .content {
+        text-align: left;
+      }
+      .highlight {
+        background-color: #d4edda;
+        padding: 15px;
+        border-left: 4px solid #28a745;
+        margin: 20px 0;
+      }
+      .footer {
+        text-align: center;
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 1px solid #eee;
+        color: #666;
+        font-size: 14px;
+      }
+      .btn {
+        display: inline-block;
+        background-color: #28a745;
+        color: white;
+        padding: 12px 24px;
+        text-decoration: none;
+        border-radius: 5px;
+        margin: 20px 0;
+      }
+      .verification-code {
+        background-color: #f8f9fa;
+        padding: 15px;
+        border: 2px dashed #6c757d;
+        text-align: center;
+        font-size: 20px;
+        font-weight: bold;
+        margin: 20px 0;
+        letter-spacing: 3px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>📧 Email Verification</h1>
+      </div>
+
+      <div class="content">
+        <h2>Hello {{.UserName}}!</h2>
+
+        <p>
+          Thank you for signing up with Go API App! To complete your registration, please verify
+          your email address.
+        </p>
+
+        {{if .VerificationCode}}
+        <div class="highlight">
+          <h3>✅ Verification Required</h3>
+          <p>Please use the following verification code:</p>
+        </div>
+
+        <div class="verification-code">{{.VerificationCode}}</div>
+
+        {{if .VerificationURL}}
+        <p>
+          <a href="{{.VerificationURL}}" class="btn">Verify Email Address</a>
+        </p>
+        {{end}}
+
+        <p><strong>This verification code will expire in {{.ExpirationTime}} minutes.</strong></p>
+        {{end}}
+
+        <p>Once your email is verified, you'll have full access to all Go API App features.</p>
+
+        <p>If you didn't create an account with us, please ignore this email.</p>
+
+        <p><strong>The Go API Team</strong></p>
+      </div>
+
+      <div class="footer">
+        <p>This email was sent automatically. Please do not reply to this email.</p>
+        <p>&copy; {{.Year}} Go API App. All rights reserved.</p>
+      </div>
+    </div>
+  </body>
+</html>

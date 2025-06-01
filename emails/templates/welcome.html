@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Welcome to Go API App</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        line-height: 1.6;
+        color: #333;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #f4f4f4;
+      }
+      .container {
+        background-color: #ffffff;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      }
+      .header {
+        text-align: center;
+        background-color: #007bff;
+        color: white;
+        padding: 20px;
+        border-radius: 10px 10px 0 0;
+        margin: -30px -30px 30px -30px;
+      }
+      .header h1 {
+        margin: 0;
+        font-size: 28px;
+      }
+      .content {
+        text-align: left;
+      }
+      .highlight {
+        background-color: #e7f3ff;
+        padding: 15px;
+        border-left: 4px solid #007bff;
+        margin: 20px 0;
+      }
+      .footer {
+        text-align: center;
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 1px solid #eee;
+        color: #666;
+        font-size: 14px;
+      }
+      .btn {
+        display: inline-block;
+        background-color: #007bff;
+        color: white;
+        padding: 12px 24px;
+        text-decoration: none;
+        border-radius: 5px;
+        margin: 20px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>🎉 Welcome to Go API App!</h1>
+      </div>
+
+      <div class="content">
+        <h2>Hello {{.UserName}}!</h2>
+
+        <p>
+          Thank you for registering with <strong>Go API App</strong>! We're excited to have you on
+          board.
+        </p>
+
+        <div class="highlight">
+          <h3>🚀 Your account has been successfully created!</h3>
+          <p>You can now start using our API services with your registered email address.</p>
+        </div>
+
+        <h3>What's Next?</h3>
+        <ul>
+          <li>🔐 Log in to your account using your credentials</li>
+          <li>📚 Explore our API documentation</li>
+          <li>💻 Start building amazing applications</li>
+          <li>🆘 Contact our support team if you need assistance</li>
+        </ul>
+
+        {{if .LoginURL}}
+        <p>
+          <a href="{{.LoginURL}}" class="btn">Login to Your Account</a>
+        </p>
+        {{end}}
+
+        <p>
+          If you have any questions or need help getting started, don't hesitate to reach out to our
+          support team.
+        </p>
+
+        <p>Happy coding!</p>
+
+        <p><strong>The Go API Team</strong></p>
+      </div>
+
+      <div class="footer">
+        <p>This email was sent automatically. Please do not reply to this email.</p>
+        <p>&copy; {{.Year}} Go API App. All rights reserved.</p>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,187 +1,139 @@
 package service
 
 import (
+	"bytes"
 	"fmt"
 	"go-api/config"
+	"html/template"
+	"path/filepath"
+	"time"
 
 	"gopkg.in/gomail.v2"
 )
 
 type EmailService struct {
-	config *config.Config
+	config        *config.Config
+	templateCache map[string]*template.Template
+}
+
+// EmailData represents the data structure for email templates
+type EmailData struct {
+	UserName         string
+	Year             int
+	LoginURL         string
+	ResetToken       string
+	ResetURL         string
+	ExpirationTime   int
+	VerificationCode string
+	VerificationURL  string
+	AppName          string
+	SupportEmail     string
+	// Add any other common fields here
 }
 
 func NewEmailService(cfg *config.Config) *EmailService {
-	return &EmailService{
-		config: cfg,
+	service := &EmailService{
+		config:        cfg,
+		templateCache: make(map[string]*template.Template),
+	}
+
+	// Load templates on initialization
+	service.loadTemplates()
+
+	return service
+}
+
+// loadTemplates loads all email templates into memory
+func (s *EmailService) loadTemplates() {
+	templateDir := "emails/templates"
+
+	// Define available templates
+	templates := []string{"welcome", "password_reset", "email_verification"}
+
+	for _, tmplName := range templates {
+		htmlPath := filepath.Join(templateDir, tmplName+".html")
+
+		// Parse HTML template
+		htmlTmpl, err := template.ParseFiles(htmlPath)
+		if err != nil {
+			fmt.Printf("Warning: Could not load HTML template %s: %v\n", htmlPath, err)
+			continue
+		}
+
+		// Store HTML template
+		s.templateCache[tmplName] = htmlTmpl
 	}
 }
 
-// SendWelcomeEmail sends a welcome email to newly registered users
+// SendTemplateEmail sends an email using a specified template with dynamic data
+func (s *EmailService) SendTemplateEmail(to, subject, templateName string, data EmailData) error {
+	// Set default values
+	if data.Year == 0 {
+		data.Year = time.Now().Year()
+	}
+	if data.AppName == "" {
+		data.AppName = "Go API App"
+	}
+	if data.SupportEmail == "" {
+		data.SupportEmail = s.config.FromEmail
+	}
+
+	// Get HTML template
+	htmlTemplate := s.templateCache[templateName]
+
+	if htmlTemplate == nil {
+		return fmt.Errorf("template '%s' not found", templateName)
+	}
+
+	var htmlBody string
+	var err error
+
+	// Render HTML template
+	var htmlBuf bytes.Buffer
+	if err = htmlTemplate.Execute(&htmlBuf, data); err != nil {
+		return fmt.Errorf("failed to execute HTML template: %w", err)
+	}
+	htmlBody = htmlBuf.String()
+
+	// Send email with only HTML body
+	return s.SendEmail(to, subject, htmlBody, "")
+}
+
+// SendWelcomeEmail sends a welcome email using the welcome template
 func (s *EmailService) SendWelcomeEmail(userEmail, userName string) error {
-	// Create message
-	m := gomail.NewMessage()
-
-	// Set headers
-	m.SetHeader("From", m.FormatAddress(s.config.FromEmail, s.config.FromName))
-	m.SetHeader("To", userEmail)
-	m.SetHeader("Subject", "Welcome to Go API App!")
-
-	// Create HTML body
-	htmlBody := s.createWelcomeEmailHTML(userName)
-	m.SetBody("text/html", htmlBody)
-
-	// Create plain text alternative
-	textBody := s.createWelcomeEmailText(userName)
-	m.AddAlternative("text/plain", textBody)
-
-	// Create dialer
-	d := gomail.NewDialer(s.config.SMTPHost, s.config.SMTPPort, s.config.EmailUsername, s.config.EmailPassword)
-
-	// Send email
-	if err := d.DialAndSend(m); err != nil {
-		return fmt.Errorf("failed to send welcome email: %w", err)
+	data := EmailData{
+		UserName: userName,
+		LoginURL: "", // Add your login URL here if needed
 	}
 
-	return nil
+	return s.SendTemplateEmail(userEmail, "Welcome to Go API App!", "welcome", data)
 }
 
-// createWelcomeEmailHTML creates the HTML version of the welcome email
-func (s *EmailService) createWelcomeEmailHTML(userName string) string {
-	return fmt.Sprintf(`
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome to Go API App</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f4f4f4;
-        }
-        .container {
-            background-color: #ffffff;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
-        .header {
-            text-align: center;
-            background-color: #007bff;
-            color: white;
-            padding: 20px;
-            border-radius: 10px 10px 0 0;
-            margin: -30px -30px 30px -30px;
-        }
-        .header h1 {
-            margin: 0;
-            font-size: 28px;
-        }
-        .content {
-            text-align: left;
-        }
-        .highlight {
-            background-color: #e7f3ff;
-            padding: 15px;
-            border-left: 4px solid #007bff;
-            margin: 20px 0;
-        }
-        .footer {
-            text-align: center;
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid #eee;
-            color: #666;
-            font-size: 14px;
-        }
-        .btn {
-            display: inline-block;
-            background-color: #007bff;
-            color: white;
-            padding: 12px 24px;
-            text-decoration: none;
-            border-radius: 5px;
-            margin: 20px 0;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>🎉 Welcome to Go API App!</h1>
-        </div>
+// SendPasswordResetEmail sends a password reset email using the password_reset template
+func (s *EmailService) SendPasswordResetEmail(userEmail, userName, resetToken string, expirationMinutes int) error {
+	data := EmailData{
+		UserName:       userName,
+		ResetToken:     resetToken,
+		ResetURL:       "", // Add your reset URL here if needed
+		ExpirationTime: expirationMinutes,
+	}
 
-        <div class="content">
-            <h2>Hello %s!</h2>
-
-            <p>Thank you for registering with <strong>Go API App</strong>! We're excited to have you on board.</p>
-
-            <div class="highlight">
-                <h3>🚀 Your account has been successfully created!</h3>
-                <p>You can now start using our API services with your registered email address.</p>
-            </div>
-
-            <h3>What's Next?</h3>
-            <ul>
-                <li>🔐 Log in to your account using your credentials</li>
-                <li>📚 Explore our API documentation</li>
-                <li>💻 Start building amazing applications</li>
-                <li>🆘 Contact our support team if you need assistance</li>
-            </ul>
-
-            <p>If you have any questions or need help getting started, don't hesitate to reach out to our support team.</p>
-
-            <p>Happy coding!</p>
-
-            <p><strong>The Go API Team</strong></p>
-        </div>
-
-        <div class="footer">
-            <p>This email was sent automatically. Please do not reply to this email.</p>
-            <p>&copy; 2025 Go API App. All rights reserved.</p>
-        </div>
-    </div>
-</body>
-</html>`, userName)
+	return s.SendTemplateEmail(userEmail, "Password Reset Request", "password_reset", data)
 }
 
-// createWelcomeEmailText creates the plain text version of the welcome email
-func (s *EmailService) createWelcomeEmailText(userName string) string {
-	return fmt.Sprintf(`
-Welcome to Go API App!
+// SendEmailVerificationEmail sends an email verification using the email_verification template
+func (s *EmailService) SendEmailVerificationEmail(userEmail, userName, verificationCode string, expirationMinutes int) error {
+	data := EmailData{
+		UserName:         userName,
+		VerificationCode: verificationCode,
+		VerificationURL:  "", // Add your verification URL here if needed
+		ExpirationTime:   expirationMinutes,
+	}
 
-Hello %s!
-
-Thank you for registering with Go API App! We're excited to have you on board.
-
-Your account has been successfully created!
-You can now start using our API services with your registered email address.
-
-What's Next?
-- Log in to your account using your credentials
-- Explore our API documentation
-- Start building amazing applications
-- Contact our support team if you need assistance
-
-If you have any questions or need help getting started, don't hesitate to reach out to our support team.
-
-Happy coding!
-
-The Go API Team
-
----
-This email was sent automatically. Please do not reply to this email.
-© 2025 Go API App. All rights reserved.
-`, userName)
+	return s.SendTemplateEmail(userEmail, "Please Verify Your Email", "email_verification", data)
 }
 
-// SendEmail sends a generic email (can be used for other email types in the future)
+// SendEmail sends a generic email (base method)
 func (s *EmailService) SendEmail(to, subject, htmlBody, textBody string) error {
 	m := gomail.NewMessage()
 
@@ -190,13 +142,10 @@ func (s *EmailService) SendEmail(to, subject, htmlBody, textBody string) error {
 	m.SetHeader("To", to)
 	m.SetHeader("Subject", subject)
 
-	// Set body
+	// Set body - prioritize HTML body
 	if htmlBody != "" {
 		m.SetBody("text/html", htmlBody)
-		if textBody != "" {
-			m.AddAlternative("text/plain", textBody)
-		}
-	} else {
+	} else if textBody != "" {
 		m.SetBody("text/plain", textBody)
 	}
 
