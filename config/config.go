@@ -39,6 +39,10 @@ type Config struct {
 	LogMaxSize     int64
 	LogMaxAge      int
 	EnableDailyLog bool
+	// Debug/Development logging
+	EnableGormLog  bool
+	EnableFiberLog bool
+	LogLevel       string
 }
 
 var GlobalConfig *Config
@@ -111,6 +115,9 @@ func setDefaults() {
 	viper.SetDefault("logging.max_size", 10*1024*1024) // 10MB
 	viper.SetDefault("logging.max_age", 30)            // 30 days
 	viper.SetDefault("logging.enable_daily", true)
+	viper.SetDefault("logging.enable_gorm_log", false)  // Default off untuk production
+	viper.SetDefault("logging.enable_fiber_log", false) // Default off untuk production
+	viper.SetDefault("logging.level", "info")           // info, debug, warn, error
 }
 
 func buildConfig() {
@@ -152,6 +159,9 @@ func buildConfig() {
 		LogMaxSize:     viper.GetInt64("logging.max_size"),
 		LogMaxAge:      viper.GetInt("logging.max_age"),
 		EnableDailyLog: viper.GetBool("logging.enable_daily"),
+		EnableGormLog:  viper.GetBool("logging.enable_gorm_log"),
+		EnableFiberLog: viper.GetBool("logging.enable_fiber_log"),
+		LogLevel:       viper.GetString("logging.level"),
 	}
 }
 

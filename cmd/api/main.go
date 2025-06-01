@@ -25,9 +25,10 @@ func createFiberApp() *fiber.App {
 	cfg := config.Get()
 
 	app := fiber.New(fiber.Config{
-		ReadTimeout:  cfg.ReadTimeout,
-		WriteTimeout: cfg.WriteTimeout,
-		IdleTimeout:  cfg.IdleTimeout,
+		ReadTimeout:           cfg.ReadTimeout,
+		WriteTimeout:          cfg.WriteTimeout,
+		IdleTimeout:           cfg.IdleTimeout,
+		DisableStartupMessage: !cfg.EnableFiberLog, // Disable startup message jika fiber log disabled
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
 			code := fiber.StatusInternalServerError
 			if e, ok := err.(*fiber.Error); ok {
@@ -82,9 +83,11 @@ func createFiberApp() *fiber.App {
 		EnableDaily: cfg.EnableDailyLog,
 	}
 
-	// Use custom Fiber logger with file output
-	fiberLoggerConfig := logger.GetFiberLoggerConfig(loggerConfig)
-	app.Use(fiberLogger.New(fiberLoggerConfig))
+	// Use custom Fiber logger with file output - hanya jika enabled
+	if cfg.EnableFiberLog {
+		fiberLoggerConfig := logger.GetFiberLoggerConfig(loggerConfig)
+		app.Use(fiberLogger.New(fiberLoggerConfig))
+	}
 
 	// CORS with production-safe configuration
 	app.Use(cors.New(cors.Config{

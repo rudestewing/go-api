@@ -17,7 +17,12 @@ func InitDB() (*gorm.DB, error) {
 		return nil, fmt.Errorf("DATABASE_URL environment variable is required")
 	}
 
-	db, err := gorm.Open(postgres.Open(cfg.DatabaseURL), &gorm.Config{})
+	// Configure GORM logger based on config
+	gormLogger := GetGormLogger()
+
+	db, err := gorm.Open(postgres.Open(cfg.DatabaseURL), &gorm.Config{
+		Logger: gormLogger,
+	})
 
 	if err != nil {
 		return nil, err
