@@ -117,8 +117,8 @@ func buildConfig() {
 	GlobalConfig = &Config{
 		// Database from config.yaml
 		DatabaseURL: viper.GetString("database.url"),
-		
-		// Security from config.yaml  
+
+		// Security from config.yaml
 		JWTSecret: viper.GetString("security.jwt_secret"),
 		JWTExpiry: viper.GetDuration("security.jwt_expiry"),
 		SecurityHeadersEnabled: viper.GetBool("security.headers_enabled"),
@@ -164,8 +164,8 @@ func validateConfig() {
 	var missingConfigs []string
 	for key, value := range requiredConfigs {
 		// Check if values are empty or still contain default placeholder values
-		if value == "" || 
-		   value == "postgres://username:password@localhost:5432/database_name" || 
+		if value == "" ||
+		   value == "postgres://username:password@localhost:5432/database_name" ||
 		   value == "your-super-secret-jwt-key-here" ||
 		   value == "your-super-secret-jwt-key-here-minimum-32-characters" {
 			missingConfigs = append(missingConfigs, key)

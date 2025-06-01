@@ -1,7 +1,7 @@
 # Configuration file template for go-api
 # Copy this file to config.yaml and customize for your environment
-# 
-# IMPORTANT: 
+#
+# IMPORTANT:
 # - config.yaml is ignored by git for security
 # - All configuration is in this single file - no environment variables needed
 # - Just copy this file to config.yaml and update the values
@@ -13,7 +13,7 @@ database:
   max_open_conns: 100
   max_lifetime: '1h'
 
-# Security configuration  
+# Security configuration
 security:
   jwt_secret: 'your-super-secret-jwt-key-here-minimum-32-characters'
   jwt_expiry: '24h'

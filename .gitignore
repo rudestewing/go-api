@@ -1,9 +1,4 @@
-# Environment files
-.env
-.env.local
-.env.*.local
-
-# Configuration files (may contain sensitive data)
+# Configuration files (contains sensitive data)
 config.yaml
 
 # Build directories and binaries
