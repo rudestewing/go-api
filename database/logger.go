@@ -2,7 +2,6 @@ package database
 
 import (
 	"go-api/config"
-	"time"
 
 	"gorm.io/gorm/logger"
 )
@@ -30,15 +29,6 @@ func GetGormLogger() logger.Interface {
 		logLevel = logger.Warn
 	}
 
-	// Custom logger configuration
-	return logger.New(
-		nil, // Use default writer (stdout)
-		logger.Config{
-			SlowThreshold:             200 * time.Millisecond, // Log slow queries
-			LogLevel:                  logLevel,
-			IgnoreRecordNotFoundError: true,  // Don't log "record not found" errors
-			Colorful:                  true,  // Enable colorful output
-			ParameterizedQueries:      false, // Log full SQL with parameters
-		},
-	)
+	// Use the default logger with proper configuration
+	return logger.Default.LogMode(logLevel)
 }
