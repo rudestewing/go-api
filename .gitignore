@@ -50,3 +50,5 @@ node_modules/
 
 # Air live reload
 .air.toml.local
+
+api

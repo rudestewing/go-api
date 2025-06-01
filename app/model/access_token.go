@@ -1,6 +1,7 @@
 package model
 
 import (
+	"go-api/app/shared/timezone"
 	"time"
 )
 
@@ -15,5 +16,5 @@ type AccessToken struct {
 
 // IsValid checks if the token is valid (not expired and not deleted)
 func (at *AccessToken) IsValid() bool {
-	return at.DeletedAt.Time.IsZero() && time.Now().Before(at.ExpiresAt)
+	return at.DeletedAt.Time.IsZero() && timezone.Now().Before(at.ExpiresAt)
 }

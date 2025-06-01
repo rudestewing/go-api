@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"go-api/app/model"
+	"go-api/app/shared/timezone"
 
 	"gorm.io/gorm"
 )
@@ -36,7 +37,7 @@ func (r *AccessTokenRepository) Create(userID uint, expiresIn time.Duration) (*m
 	accessToken := &model.AccessToken{
 		Token:     token,
 		UserID:    userID,
-		ExpiresAt: time.Now().Add(expiresIn),
+		ExpiresAt: timezone.Now().Add(expiresIn), // Use timezone-aware time
 	}
 
 	if err := r.db.Create(accessToken).Error; err != nil {
@@ -75,11 +76,11 @@ func (r *AccessTokenRepository) RevokeAllUserTokens(userID uint) error {
 
 func (r *AccessTokenRepository) DeleteExpiredTokens() error {
 	// Hard delete expired tokens that are already soft deleted
-	return r.db.Unscoped().Where("expires_at < ? AND deleted_at IS NOT NULL", time.Now()).Delete(&model.AccessToken{}).Error
+	return r.db.Unscoped().Where("expires_at < ? AND deleted_at IS NOT NULL", timezone.Now()).Delete(&model.AccessToken{}).Error
 }
 
 // CleanupExpiredTokens deletes all expired tokens (even if not revoked)
 // This should be called periodically to clean up the database
 func (r *AccessTokenRepository) CleanupExpiredTokens() error {
-	return r.db.Unscoped().Where("expires_at < ?", time.Now()).Delete(&model.AccessToken{}).Error
+	return r.db.Unscoped().Where("expires_at < ?", timezone.Now()).Delete(&model.AccessToken{}).Error
 }

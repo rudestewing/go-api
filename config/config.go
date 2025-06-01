@@ -14,6 +14,9 @@ type Config struct {
 	// Security configurations
 	JWTExpiry   time.Duration
 	Environment string
+	// Timezone configuration
+	Timezone   string
+	TimezoneLoc *time.Location
 	// CORS configurations
 	AllowedOrigins string
 	AllowedMethods string
@@ -95,6 +98,7 @@ func setDefaults() {
 	// App defaults
 	viper.SetDefault("app.port", "8000")
 	viper.SetDefault("app.environment", "development")
+	viper.SetDefault("app.timezone", "Asia/Jakarta")
 	viper.SetDefault("app.read_timeout", 30*time.Second)
 	viper.SetDefault("app.write_timeout", 30*time.Second)
 	viper.SetDefault("app.idle_timeout", 120*time.Second)
@@ -134,6 +138,7 @@ func buildConfig() {
 		// App configurations
 		AppPort:         viper.GetString("app.port"),
 		Environment:     viper.GetString("app.environment"),
+		Timezone:        viper.GetString("app.timezone"),
 		ReadTimeout:     viper.GetDuration("app.read_timeout"),
 		WriteTimeout:    viper.GetDuration("app.write_timeout"),
 		IdleTimeout:     viper.GetDuration("app.idle_timeout"),
@@ -162,6 +167,16 @@ func buildConfig() {
 		EnableGormLog:  viper.GetBool("logging.enable_gorm_log"),
 		EnableFiberLog: viper.GetBool("logging.enable_fiber_log"),
 		LogLevel:       viper.GetString("logging.level"),
+	}
+
+	// Load timezone location
+	if loc, err := time.LoadLocation(GlobalConfig.Timezone); err != nil {
+		log.Printf("Warning: Invalid timezone '%s', using UTC instead. Error: %v", GlobalConfig.Timezone, err)
+		GlobalConfig.TimezoneLoc = time.UTC
+		GlobalConfig.Timezone = "UTC"
+	} else {
+		GlobalConfig.TimezoneLoc = loc
+		log.Printf("Timezone loaded successfully: %s", GlobalConfig.Timezone)
 	}
 }
 
@@ -238,4 +253,48 @@ func WriteConfig() error {
 
 func WriteConfigAs(filename string) error {
 	return viper.WriteConfigAs(filename)
+}
+
+// Timezone helper functions
+
+// Now returns the current time in the configured timezone
+func Now() time.Time {
+	if GlobalConfig == nil || GlobalConfig.TimezoneLoc == nil {
+		return time.Now().UTC()
+	}
+	return time.Now().In(GlobalConfig.TimezoneLoc)
+}
+
+// NowUTC returns the current time in UTC
+func NowUTC() time.Time {
+	return time.Now().UTC()
+}
+
+// ToLocalTime converts a UTC time to the configured timezone
+func ToLocalTime(t time.Time) time.Time {
+	if GlobalConfig == nil || GlobalConfig.TimezoneLoc == nil {
+		return t.UTC()
+	}
+	return t.In(GlobalConfig.TimezoneLoc)
+}
+
+// ToUTC converts a time from the configured timezone to UTC
+func ToUTC(t time.Time) time.Time {
+	return t.UTC()
+}
+
+// GetTimezone returns the configured timezone string
+func GetTimezone() string {
+	if GlobalConfig == nil {
+		return "UTC"
+	}
+	return GlobalConfig.Timezone
+}
+
+// GetTimezoneLocation returns the configured timezone location
+func GetTimezoneLocation() *time.Location {
+	if GlobalConfig == nil || GlobalConfig.TimezoneLoc == nil {
+		return time.UTC
+	}
+	return GlobalConfig.TimezoneLoc
 }
