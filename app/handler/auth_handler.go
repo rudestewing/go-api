@@ -36,14 +36,15 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	ctx := c.UserContext()
 
 	// Call service with timeout context
-	token, err := h.authService.Login(ctx, req.Email, req.Password)
+	accessToken, err := h.authService.Login(ctx, req.Email, req.Password)
 	if err != nil {
 		return response.Unauthorized(c, err.Error())
 	}
 
-
 	return response.Success(c, fiber.Map{
-		"token": token,
+		"access_token": accessToken.Token,
+		"expires_at":   accessToken.ExpiresAt,
+		"user":         accessToken.User,
 	})
 }
 
@@ -74,4 +75,38 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 	}
 
 	return response.Success(c, nil, "User registered successfully")
+}
+
+func (h *AuthHandler) Logout(c *fiber.Ctx) error {
+	// Get token from Authorization header
+	authHeader := c.Get("Authorization")
+	if authHeader == "" {
+		return response.Unauthorized(c, "Authorization header required")
+	}
+
+	// Extract token (assuming Bearer token format)
+	token := authHeader
+	if len(authHeader) > 7 && authHeader[:7] == "Bearer " {
+		token = authHeader[7:]
+	}
+
+	if err := h.authService.Logout(token); err != nil {
+		return response.InternalError(c, "Failed to logout")
+	}
+
+	return response.Success(c, nil, "Logged out successfully")
+}
+
+func (h *AuthHandler) LogoutAll(c *fiber.Ctx) error {
+	// Get user from context (set by auth middleware)
+	userID := c.Locals("user_id")
+	if userID == nil {
+		return response.Unauthorized(c, "Unauthorized")
+	}
+
+	if err := h.authService.LogoutAll(userID.(uint)); err != nil {
+		return response.InternalError(c, "Failed to logout from all devices")
+	}
+
+	return response.Success(c, nil, "Logged out from all devices successfully")
 }

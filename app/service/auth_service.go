@@ -10,43 +10,63 @@ import (
 	"go-api/config"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type AuthService struct {
-	userRepo    *repository.UserRepository
-	roleRepo    *repository.RoleRepository
-	tokenExpiry time.Duration
+	userRepo        *repository.UserRepository
+	roleRepo        *repository.RoleRepository
+	accessTokenRepo *repository.AccessTokenRepository
+	tokenExpiry     time.Duration
 }
 
-func NewAuthService(userRepo *repository.UserRepository, roleRepo *repository.RoleRepository) *AuthService {
+func NewAuthService(userRepo *repository.UserRepository, roleRepo *repository.RoleRepository, accessTokenRepo *repository.AccessTokenRepository) *AuthService {
 	return &AuthService{
-		userRepo:    userRepo,
-		roleRepo:    roleRepo,
-		tokenExpiry: config.Get().JWTExpiry,
+		userRepo:        userRepo,
+		roleRepo:        roleRepo,
+		accessTokenRepo: accessTokenRepo,
+		tokenExpiry:     config.Get().JWTExpiry,
 	}
 }
 
-func (s *AuthService) Login(ctx context.Context, email, password string) (string, error) {
+func (s *AuthService) Login(ctx context.Context, email, password string) (*model.AccessToken, error) {
 	user, err := s.userRepo.FindByEmail(ctx, email)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
-		return "", errors.New("invalid credentials")
+		return nil, errors.New("invalid credentials")
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"user_id": user.ID,
-		"email":   user.Email,
-		"exp":     time.Now().Add(s.tokenExpiry).Unix(),
-	})
+	// Create access token
+	accessToken, err := s.accessTokenRepo.Create(user.ID, s.tokenExpiry)
+	if err != nil {
+		return nil, err
+	}
 
-	jwtSecret := config.Get().JWTSecret
+	return accessToken, nil
+}
 
-	return token.SignedString([]byte(jwtSecret))
+func (s *AuthService) ValidateToken(token string) (*model.AccessToken, error) {
+	accessToken, err := s.accessTokenRepo.FindByToken(token)
+	if err != nil {
+		return nil, err
+	}
+
+	if !accessToken.IsValid() {
+		return nil, errors.New("invalid or expired token")
+	}
+
+	return accessToken, nil
+}
+
+func (s *AuthService) Logout(token string) error {
+	return s.accessTokenRepo.RevokeToken(token)
+}
+
+func (s *AuthService) LogoutAll(userID uint) error {
+	return s.accessTokenRepo.RevokeAllUserTokens(userID)
 }
 
 func (s *AuthService) Register(ctx context.Context, req *dto.RegisterRequest) error {

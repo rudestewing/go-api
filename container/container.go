@@ -30,9 +30,10 @@ func NewContainer() (*Container, error) {
 	// Initialize repositories
 	userRepo := repository.NewUserRepository(db)
 	roleRepo := repository.NewRoleRepository(db)
+	accessTokenRepo := repository.NewAccessTokenRepository(db)
 
 	// Initialize services
-	authService := service.NewAuthService(userRepo, roleRepo)
+	authService := service.NewAuthService(userRepo, roleRepo, accessTokenRepo)
 	userService := service.NewUserService(userRepo)
 
 	container := &Container{

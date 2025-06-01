@@ -1,17 +1,14 @@
 package middleware
 
 import (
-	"fmt"
-	"go-api/config"
+	"go-api/app/service"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/golang-jwt/jwt/v5"
 )
 
-func JWTAuthMiddleware() fiber.Handler {
+func AuthMiddleware(authService *service.AuthService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		jwtSecret := config.Get().JWTSecret
 		authHeader := c.Get("Authorization")
 		if authHeader == "" {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
@@ -19,29 +16,25 @@ func JWTAuthMiddleware() fiber.Handler {
 			})
 		}
 
-		tokenString := strings.Replace(authHeader, "Bearer ", "", 1)
-		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
-			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-			}
-			return []byte(jwtSecret), nil
-		})
+		// Extract token (supports both "Bearer token" and just "token")
+		token := authHeader
+		if strings.HasPrefix(authHeader, "Bearer ") {
+			token = authHeader[7:]
+		}
 
+		// Validate token using auth service
+		accessToken, err := authService.ValidateToken(token)
 		if err != nil {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-				"error": "Invalid token",
+				"error": "Invalid or expired token",
 			})
 		}
 
-		if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-			// Add claims to context
-			c.Locals("user_id", claims["user_id"])
-			c.Locals("email", claims["email"])
-			return c.Next()
-		}
+		// Add user info to context
+		c.Locals("user_id", accessToken.UserID)
+		c.Locals("user", accessToken.User)
+		c.Locals("access_token", accessToken)
 
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": "Invalid token claims",
-		})
+		return c.Next()
 	}
 }

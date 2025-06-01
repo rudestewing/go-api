@@ -136,7 +136,7 @@ func main() {
 	handler := handler.NewHandler(container)
 
 	// Setup Routes
-	router.RegisterRoutes(app, handler)
+	router.RegisterRoutes(app, handler, container.AuthService)
 
 	port := ":" + cfg.AppPort
 	logger.LogInfo("🚀 Server starting on port %s...", cfg.AppPort)
