@@ -17,19 +17,7 @@ type EmailService struct {
 }
 
 // EmailData represents the data structure for email templates
-type EmailData struct {
-	UserName         string
-	Year             int
-	LoginURL         string
-	ResetToken       string
-	ResetURL         string
-	ExpirationTime   int
-	VerificationCode string
-	VerificationURL  string
-	AppName          string
-	SupportEmail     string
-	// Add any other common fields here
-}
+type EmailData map[string]any
 
 func NewEmailService(cfg *config.Config) *EmailService {
 	service := &EmailService{
@@ -65,73 +53,6 @@ func (s *EmailService) loadTemplates() {
 	}
 }
 
-// SendTemplateEmail sends an email using a specified template with dynamic data
-func (s *EmailService) SendTemplateEmail(to, subject, templateName string, data EmailData) error {
-	// Set default values
-	if data.Year == 0 {
-		data.Year = time.Now().Year()
-	}
-	if data.AppName == "" {
-		data.AppName = "Go API App"
-	}
-	if data.SupportEmail == "" {
-		data.SupportEmail = s.config.FromEmail
-	}
-
-	// Get HTML template
-	htmlTemplate := s.templateCache[templateName]
-
-	if htmlTemplate == nil {
-		return fmt.Errorf("template '%s' not found", templateName)
-	}
-
-	var htmlBody string
-	var err error
-
-	// Render HTML template
-	var htmlBuf bytes.Buffer
-	if err = htmlTemplate.Execute(&htmlBuf, data); err != nil {
-		return fmt.Errorf("failed to execute HTML template: %w", err)
-	}
-	htmlBody = htmlBuf.String()
-
-	// Send email with only HTML body
-	return s.SendEmail(to, subject, htmlBody, "")
-}
-
-// SendWelcomeEmail sends a welcome email using the welcome template
-func (s *EmailService) SendWelcomeEmail(userEmail, userName string) error {
-	data := EmailData{
-		UserName: userName,
-		LoginURL: "", // Add your login URL here if needed
-	}
-
-	return s.SendTemplateEmail(userEmail, "Welcome to Go API App!", "welcome", data)
-}
-
-// SendPasswordResetEmail sends a password reset email using the password_reset template
-func (s *EmailService) SendPasswordResetEmail(userEmail, userName, resetToken string, expirationMinutes int) error {
-	data := EmailData{
-		UserName:       userName,
-		ResetToken:     resetToken,
-		ResetURL:       "", // Add your reset URL here if needed
-		ExpirationTime: expirationMinutes,
-	}
-
-	return s.SendTemplateEmail(userEmail, "Password Reset Request", "password_reset", data)
-}
-
-// SendEmailVerificationEmail sends an email verification using the email_verification template
-func (s *EmailService) SendEmailVerificationEmail(userEmail, userName, verificationCode string, expirationMinutes int) error {
-	data := EmailData{
-		UserName:         userName,
-		VerificationCode: verificationCode,
-		VerificationURL:  "", // Add your verification URL here if needed
-		ExpirationTime:   expirationMinutes,
-	}
-
-	return s.SendTemplateEmail(userEmail, "Please Verify Your Email", "email_verification", data)
-}
 
 // SendEmail sends a generic email (base method)
 func (s *EmailService) SendEmail(to, subject, htmlBody, textBody string) error {
@@ -158,4 +79,74 @@ func (s *EmailService) SendEmail(to, subject, htmlBody, textBody string) error {
 	}
 
 	return nil
+}
+
+
+// SendTemplateEmail sends an email using a specified template with dynamic data
+func (s *EmailService) SendTemplateEmail(to, subject, templateName string, data EmailData) error {
+	// Set default values
+	if data["Year"] == 0 {
+		data["Year"] = time.Now().Year()
+	}
+	if data["AppName"] == "" {
+		data["AppName"] = "Go API App"
+	}
+	if data["SupportEmail"] == "" {
+		data["SupportEmail"] = s.config.FromEmail
+	}
+
+	// Get HTML template
+	htmlTemplate := s.templateCache[templateName]
+
+	if htmlTemplate == nil {
+		return fmt.Errorf("template '%s' not found", templateName)
+	}
+
+	var htmlBody string
+	var err error
+
+	// Render HTML template
+	var htmlBuf bytes.Buffer
+	if err = htmlTemplate.Execute(&htmlBuf, data); err != nil {
+		return fmt.Errorf("failed to execute HTML template: %w", err)
+	}
+	htmlBody = htmlBuf.String()
+
+	// Send email with only HTML body
+	return s.SendEmail(to, subject, htmlBody, "")
+}
+
+
+// SendWelcomeEmail sends a welcome email using the welcome template
+func (s *EmailService) SendWelcomeEmail(userEmail, userName string) error {
+	data := EmailData{
+		"UserName": userName,
+		"LoginURL": "", // Add your login URL here if needed
+	}
+
+	return s.SendTemplateEmail(userEmail, "Welcome to Go API App!", "welcome", data)
+}
+
+// SendPasswordResetEmail sends a password reset email using the password_reset template
+func (s *EmailService) SendPasswordResetEmail(userEmail, userName, resetToken string, expirationMinutes int) error {
+	data := EmailData{
+		"UserName":   userName,
+		"ResetToken": resetToken,
+		"ResetURL":   "", // Add your reset URL here if needed
+		"ExpirationTime": expirationMinutes,
+	}
+
+	return s.SendTemplateEmail(userEmail, "Password Reset Request", "password_reset", data)
+}
+
+// SendEmailVerificationEmail sends an email verification using the email_verification template
+func (s *EmailService) SendEmailVerificationEmail(userEmail, userName, verificationCode string, expirationMinutes int) error {
+	data := EmailData{
+		"UserName":         userName,
+		"VerificationCode": verificationCode,
+		"VerificationURL":  "", // Add your verification URL here if needed
+		"ExpirationTime":   expirationMinutes,
+	}
+
+	return s.SendTemplateEmail(userEmail, "Please Verify Your Email", "email_verification", data)
 }
