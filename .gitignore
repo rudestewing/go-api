@@ -3,6 +3,9 @@
 .env.local
 .env.*.local
 
+# Configuration files (may contain sensitive data)
+config.yaml
+
 # Build directories and binaries
 tmp/
 dist/

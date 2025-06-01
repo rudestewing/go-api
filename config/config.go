@@ -2,11 +2,10 @@ package config
 
 import (
 	"log"
-	"os"
-	"strconv"
+	"strings"
 	"time"
 
-	"github.com/joho/godotenv"
+	"github.com/spf13/viper"
 )
 
 type Config struct {
@@ -45,135 +44,200 @@ type Config struct {
 
 var GlobalConfig *Config
 
+// InitConfig initializes viper configuration
 func InitConfig() {
-	if err := godotenv.Load(); err != nil {
-		log.Println("Warning: Error loading .env file:", err)
+	// Set config file name and paths
+	viper.SetConfigName("config")
+	viper.SetConfigType("yaml")
+	viper.AddConfigPath(".")
+	viper.AddConfigPath("./config")
+	viper.AddConfigPath("$HOME/.go-api")
+
+	// Enable reading from environment variables
+	viper.AutomaticEnv()
+	viper.SetEnvPrefix("GO_API")
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+
+	// Bind specific environment variables for backward compatibility
+	bindEnvironmentVariables()
+
+	// Set default values
+	setDefaults()
+
+	// Read config file (optional, fallback to env vars and defaults)
+	if err := viper.ReadInConfig(); err != nil {
+		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+			log.Println("Config file not found, using environment variables and defaults")
+		} else {
+			log.Printf("Error reading config file: %v", err)
+		}
+	} else {
+		log.Printf("Using config file: %s", viper.ConfigFileUsed())
 	}
 
-	validateRequiredEnvs()
+	// Build config struct
+	buildConfig()
 
-	GlobalConfig = &Config{
-		DatabaseURL: os.Getenv("DATABASE_URL"),
-		AppPort:     getEnv("APP_PORT", "8000"),
-		JWTSecret:   os.Getenv("JWT_SECRET"),
-		// Security configurations
-		JWTExpiry:   getEnvAsDuration("JWT_EXPIRY", time.Hour*24),
-		Environment: getEnv("ENVIRONMENT", "development"),
-		// CORS configurations
-		AllowedOrigins: getEnv("ALLOWED_ORIGINS", "http://localhost:3000"),
-		AllowedMethods: getEnv("ALLOWED_METHODS", "GET,POST,PUT,DELETE,OPTIONS"),
-		AllowedHeaders: getEnv("ALLOWED_HEADERS", "Origin,Content-Type,Accept,Authorization"),
-		// Rate limiting configurations
-		RateLimitMax:     getEnvAsInt("RATE_LIMIT_MAX", 100),
-		RateLimitWindow:  getEnvAsDuration("RATE_LIMIT_WINDOW", time.Minute),
-		RateLimitEnabled: getEnvAsBool("RATE_LIMIT_ENABLED", true),
-		// Security configurations
-		SecurityHeadersEnabled: getEnvAsBool("SECURITY_HEADERS_ENABLED", true),
-		TrustedProxies:         getEnv("TRUSTED_PROXIES", ""),
-		// Database configurations
-		DBMaxIdleConns: getEnvAsInt("DB_MAX_IDLE_CONNS", 10),
-		DBMaxOpenConns: getEnvAsInt("DB_MAX_OPEN_CONNS", 100),
-		DBMaxLifetime:  getEnvAsDuration("DB_MAX_LIFETIME", time.Hour),
-		// Server timeout configurations
-		ReadTimeout:     getEnvAsDuration("READ_TIMEOUT", time.Second*30),
-		WriteTimeout:    getEnvAsDuration("WRITE_TIMEOUT", time.Second*30),
-		IdleTimeout:     getEnvAsDuration("IDLE_TIMEOUT", time.Second*120),
-		ShutdownTimeout: getEnvAsDuration("SHUTDOWN_TIMEOUT", time.Second*10),
-		// Logging configurations
-		LogDir:         getEnv("LOG_DIR", "storage/logs"),
-		LogMaxSize:     getEnvAsInt64("LOG_MAX_SIZE", 10*1024*1024), // 10MB
-		LogMaxAge:      getEnvAsInt("LOG_MAX_AGE", 30),              // 30 days
-		EnableDailyLog: getEnvAsBool("ENABLE_DAILY_LOG", true),
-	}
+	// Validate critical configurations
+	validateConfig()
 
 	log.Println("Configuration loaded successfully")
 }
 
-// validateRequiredEnvs checks if all required environment variables are set
-func validateRequiredEnvs() {
-	requiredEnvs := []string{
-		"DATABASE_URL",
-		"JWT_SECRET",
+func bindEnvironmentVariables() {
+	// Bind only required environment variables for security
+	viper.BindEnv("database_url", "DATABASE_URL")
+	viper.BindEnv("jwt_secret", "JWT_SECRET")
+	
+	// Optional: Allow GO_API_ prefixed environment variables to override config.yaml
+	// Example: GO_API_APP_PORT=8080 will override app.port in config.yaml
+}
+
+func setDefaults() {
+	// App defaults
+	viper.SetDefault("app.port", "8000")
+	viper.SetDefault("app.environment", "development")
+	viper.SetDefault("app.read_timeout", 30*time.Second)
+	viper.SetDefault("app.write_timeout", 30*time.Second)
+	viper.SetDefault("app.idle_timeout", 120*time.Second)
+	viper.SetDefault("app.shutdown_timeout", 10*time.Second)
+
+	// Security defaults
+	viper.SetDefault("security.jwt_expiry", 24*time.Hour)
+	viper.SetDefault("security.headers_enabled", true)
+	viper.SetDefault("security.trusted_proxies", "")
+
+	// CORS defaults
+	viper.SetDefault("cors.allowed_origins", "http://localhost:3000")
+	viper.SetDefault("cors.allowed_methods", "GET,POST,PUT,DELETE,OPTIONS")
+	viper.SetDefault("cors.allowed_headers", "Origin,Content-Type,Accept,Authorization")
+
+	// Rate limiting defaults
+	viper.SetDefault("rate_limit.enabled", true)
+	viper.SetDefault("rate_limit.max", 100)
+	viper.SetDefault("rate_limit.window", time.Minute)
+
+	// Database defaults
+	viper.SetDefault("database.max_idle_conns", 10)
+	viper.SetDefault("database.max_open_conns", 100)
+	viper.SetDefault("database.max_lifetime", time.Hour)
+
+	// Logging defaults
+	viper.SetDefault("logging.dir", "storage/logs")
+	viper.SetDefault("logging.max_size", 10*1024*1024) // 10MB
+	viper.SetDefault("logging.max_age", 30)            // 30 days
+	viper.SetDefault("logging.enable_daily", true)
+}
+
+func buildConfig() {
+	GlobalConfig = &Config{
+		// Required from env
+		DatabaseURL: viper.GetString("database_url"),
+		JWTSecret:   viper.GetString("jwt_secret"),
+
+		// App configurations
+		AppPort:         viper.GetString("app.port"),
+		Environment:     viper.GetString("app.environment"),
+		ReadTimeout:     viper.GetDuration("app.read_timeout"),
+		WriteTimeout:    viper.GetDuration("app.write_timeout"),
+		IdleTimeout:     viper.GetDuration("app.idle_timeout"),
+		ShutdownTimeout: viper.GetDuration("app.shutdown_timeout"),
+
+		// Security configurations
+		JWTExpiry:              viper.GetDuration("security.jwt_expiry"),
+		SecurityHeadersEnabled: viper.GetBool("security.headers_enabled"),
+		TrustedProxies:         viper.GetString("security.trusted_proxies"),
+
+		// CORS configurations
+		AllowedOrigins: viper.GetString("cors.allowed_origins"),
+		AllowedMethods: viper.GetString("cors.allowed_methods"),
+		AllowedHeaders: viper.GetString("cors.allowed_headers"),
+
+		// Rate limiting configurations
+		RateLimitEnabled: viper.GetBool("rate_limit.enabled"),
+		RateLimitMax:     viper.GetInt("rate_limit.max"),
+		RateLimitWindow:  viper.GetDuration("rate_limit.window"),
+
+		// Database configurations
+		DBMaxIdleConns: viper.GetInt("database.max_idle_conns"),
+		DBMaxOpenConns: viper.GetInt("database.max_open_conns"),
+		DBMaxLifetime:  viper.GetDuration("database.max_lifetime"),
+
+		// Logging configurations
+		LogDir:         viper.GetString("logging.dir"),
+		LogMaxSize:     viper.GetInt64("logging.max_size"),
+		LogMaxAge:      viper.GetInt("logging.max_age"),
+		EnableDailyLog: viper.GetBool("logging.enable_daily"),
+	}
+}
+
+func validateConfig() {
+	requiredConfigs := map[string]string{
+		"DATABASE_URL": GlobalConfig.DatabaseURL,
+		"JWT_SECRET":   GlobalConfig.JWTSecret,
 	}
 
-	var missingEnvs []string
-	for _, env := range requiredEnvs {
-		if os.Getenv(env) == "" {
-			missingEnvs = append(missingEnvs, env)
+	var missingConfigs []string
+	for key, value := range requiredConfigs {
+		if value == "" {
+			missingConfigs = append(missingConfigs, key)
 		}
 	}
 
-	if len(missingEnvs) > 0 {
-		log.Fatalf("Required environment variables are missing: %v", missingEnvs)
+	if len(missingConfigs) > 0 {
+		log.Fatalf("Required configurations are missing: %v", missingConfigs)
 	}
 }
 
-func getEnv(key, defaultValue string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return defaultValue
-}
-
-func getEnvAsInt(key string, defaultValue int) int {
-	valueStr := os.Getenv(key)
-	if valueStr == "" {
-		return defaultValue
-	}
-
-	value, err := strconv.Atoi(valueStr)
-	if err != nil {
-		log.Printf("Warning: Invalid value for environment variable %s, using default %d. Error: %v", key, defaultValue, err)
-		return defaultValue
-	}
-	return value
-}
-
-func getEnvAsInt64(key string, defaultValue int64) int64 {
-	valueStr := os.Getenv(key)
-	if valueStr == "" {
-		return defaultValue
-	}
-
-	value, err := strconv.ParseInt(valueStr, 10, 64)
-	if err != nil {
-		log.Printf("Warning: Invalid value for environment variable %s, using default %d. Error: %v", key, defaultValue, err)
-		return defaultValue
-	}
-	return value
-}
-
-func getEnvAsBool(key string, defaultValue bool) bool {
-	valueStr := os.Getenv(key)
-	if valueStr == "" {
-		return defaultValue
-	}
-
-	value, err := strconv.ParseBool(valueStr)
-	if err != nil {
-		log.Printf("Warning: Invalid value for environment variable %s, using default %v. Error: %v", key, defaultValue, err)
-		return defaultValue
-	}
-	return value
-}
-
-func getEnvAsDuration(key string, defaultValue time.Duration) time.Duration {
-	valueStr := os.Getenv(key)
-	if valueStr == "" {
-		return defaultValue
-	}
-
-	value, err := time.ParseDuration(valueStr)
-	if err != nil {
-		log.Printf("Warning: Invalid value for environment variable %s, using default %v. Error: %v", key, defaultValue, err)
-		return defaultValue
-	}
-	return value
-}
-
+// Get returns the global config instance
 func Get() *Config {
 	if GlobalConfig == nil {
 		log.Fatal("Config not initialized. Call InitConfig() first.")
 	}
 	return GlobalConfig
+}
+
+// Viper helper functions for direct access to viper instance
+func GetString(key string) string {
+	return viper.GetString(key)
+}
+
+func GetInt(key string) int {
+	return viper.GetInt(key)
+}
+
+func GetBool(key string) bool {
+	return viper.GetBool(key)
+}
+
+func GetDuration(key string) time.Duration {
+	return viper.GetDuration(key)
+}
+
+func GetFloat64(key string) float64 {
+	return viper.GetFloat64(key)
+}
+
+func GetStringSlice(key string) []string {
+	return viper.GetStringSlice(key)
+}
+
+func Set(key string, value interface{}) {
+	viper.Set(key, value)
+}
+
+func IsSet(key string) bool {
+	return viper.IsSet(key)
+}
+
+func AllKeys() []string {
+	return viper.AllKeys()
+}
+
+func WriteConfig() error {
+	return viper.WriteConfig()
+}
+
+func WriteConfigAs(filename string) error {
+	return viper.WriteConfigAs(filename)
 }
