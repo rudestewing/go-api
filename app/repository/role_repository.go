@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"go-api/app/model"
 
 	"gorm.io/gorm"
@@ -20,6 +21,9 @@ func (r *RoleRepository) FindByCode(ctx context.Context, code string) (*model.Ro
 	err := r.db.WithContext(ctx).Where("code = ?", code).First(&role).Error
 
 	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, errors.New("role not found")
+		}
 		return nil, err
 	}
 

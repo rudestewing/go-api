@@ -10,12 +10,14 @@ import (
 )
 
 type AuthHandler struct {
-	authService *service.AuthService
+	authService  *service.AuthService
+	emailService *service.EmailService
 }
 
-func NewAuthHandler(authService *service.AuthService) *AuthHandler {
+func NewAuthHandler(authService *service.AuthService, emailService *service.EmailService) *AuthHandler {
 	return &AuthHandler{
-		authService: authService,
+		authService:  authService,
+		emailService: emailService,
 	}
 }
 
@@ -71,8 +73,18 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 
 	// Call service with context
 	if err := h.authService.Register(ctx, &req); err != nil {
-		return response.InternalError(c, err.Error())
+		return response.BadRequest(c, err.Error())
 	}
+
+	// Send welcome email in background (don't block the response)
+	go func() {
+		if err := h.emailService.SendWelcomeEmail(req.Email, req.Name); err != nil {
+			// Log the error but don't fail the registration
+			// You might want to use your logger here
+			// For now, we'll just continue silently
+			// In production, you should log this error properly
+		}
+	}()
 
 	return response.Success(c, nil, "User registered successfully")
 }

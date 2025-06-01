@@ -46,6 +46,13 @@ type Config struct {
 	EnableGormLog  bool
 	EnableFiberLog bool
 	LogLevel       string
+	// Email configurations
+	SMTPHost      string
+	SMTPPort      int
+	EmailUsername string
+	EmailPassword string
+	FromName      string
+	FromEmail     string
 }
 
 var GlobalConfig *Config
@@ -122,6 +129,14 @@ func setDefaults() {
 	viper.SetDefault("logging.enable_gorm_log", false)  // Default off untuk production
 	viper.SetDefault("logging.enable_fiber_log", false) // Default off untuk production
 	viper.SetDefault("logging.level", "info")           // info, debug, warn, error
+
+	// Email defaults
+	viper.SetDefault("email.smtp_host", "smtp.gmail.com")
+	viper.SetDefault("email.smtp_port", 587)
+	viper.SetDefault("email.username", "")
+	viper.SetDefault("email.password", "")
+	viper.SetDefault("email.from_name", "Go API App")
+	viper.SetDefault("email.from_email", "")
 }
 
 func buildConfig() {
@@ -167,6 +182,14 @@ func buildConfig() {
 		EnableGormLog:  viper.GetBool("logging.enable_gorm_log"),
 		EnableFiberLog: viper.GetBool("logging.enable_fiber_log"),
 		LogLevel:       viper.GetString("logging.level"),
+
+		// Email configurations
+		SMTPHost:      viper.GetString("email.smtp_host"),
+		SMTPPort:      viper.GetInt("email.smtp_port"),
+		EmailUsername: viper.GetString("email.username"),
+		EmailPassword: viper.GetString("email.password"),
+		FromName:      viper.GetString("email.from_name"),
+		FromEmail:     viper.GetString("email.from_email"),
 	}
 
 	// Load timezone location

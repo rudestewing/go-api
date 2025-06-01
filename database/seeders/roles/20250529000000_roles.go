@@ -2,6 +2,7 @@ package main
 
 import (
 	"go-api/app/model"
+	"go-api/app/shared/constant"
 	"go-api/config"
 	"go-api/database"
 	"log"
@@ -33,16 +34,12 @@ func runRoles(db *gorm.DB) error {
 	// Example roles data
 	roles := []model.Role{
 		{
-			Code: "admin",
+			Code: constant.RoleCodeAdmin,
 			Name: "Administrator",
 		},
 		{
-			Code: "user",
+			Code: constant.RoleCodeUser,
 			Name: "User",
-		},
-		{
-			Code: "moderator",
-			Name: "Moderator",
 		},
 	}
 

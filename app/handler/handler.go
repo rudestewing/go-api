@@ -10,7 +10,7 @@ type Handler struct {
 
 func NewHandler(container *container.Container) *Handler {
 	return &Handler{
-		AuthHandler: NewAuthHandler(container.AuthService),
+		AuthHandler: NewAuthHandler(container.AuthService, container.EmailService),
 		UserHandler: NewUserHandler(container.UserService),
 		AsynchronousHandler: NewAsynchronousHandler(),
 	}
