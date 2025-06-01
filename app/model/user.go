@@ -1,7 +1,7 @@
 package model
 
 type User struct {
-	BaseModelAttributes
+	BaseAttributes
 	Email    string `gorm:"uniqueIndex;not null" json:"email"`
 	Name     string `gorm:"nullable" json:"name"`
 	Password string `gorm:"nullable" json:"-"`

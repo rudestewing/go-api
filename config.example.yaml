@@ -3,10 +3,24 @@
 # 
 # IMPORTANT: 
 # - config.yaml is ignored by git for security
-# - Set DATABASE_URL and JWT_SECRET via environment variables
-# - You can override any config with GO_API_ prefixed environment variables
-#   Example: GO_API_APP_PORT=8080
+# - All configuration is in this single file - no environment variables needed
+# - Just copy this file to config.yaml and update the values
 
+# Database configuration
+database:
+  url: 'postgres://username:password@localhost:5432/database_name'
+  max_idle_conns: 10
+  max_open_conns: 100
+  max_lifetime: '1h'
+
+# Security configuration  
+security:
+  jwt_secret: 'your-super-secret-jwt-key-here-minimum-32-characters'
+  jwt_expiry: '24h'
+  headers_enabled: true
+  trusted_proxies: ''
+
+# Application configuration
 app:
   port: '8000'
   environment: 'development'
@@ -15,32 +29,21 @@ app:
   idle_timeout: '120s'
   shutdown_timeout: '10s'
 
-security:
-  jwt_expiry: '24h'
-  headers_enabled: true
-  trusted_proxies: ''
-
+# CORS configuration
 cors:
   allowed_origins: 'http://localhost:3000'
   allowed_methods: 'GET,POST,PUT,DELETE,OPTIONS'
   allowed_headers: 'Origin,Content-Type,Accept,Authorization'
 
+# Rate limiting configuration
 rate_limit:
   enabled: true
   max: 100
   window: '1m'
 
-database:
-  max_idle_conns: 10
-  max_open_conns: 100
-  max_lifetime: '1h'
-
+# Logging configuration
 logging:
   dir: 'storage/logs'
   max_size: 10485760 # 10MB in bytes
   max_age: 30 # days
   enable_daily: true
-
-# Required Environment Variables (for security, not stored in this file):
-# DATABASE_URL=postgres://username:password@localhost:5432/database_name
-# JWT_SECRET=your-super-secret-jwt-key-here-minimum-32-characters

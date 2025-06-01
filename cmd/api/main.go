@@ -103,14 +103,6 @@ func main() {
 
 	cfg := config.Get()
 
-	// Validate critical configurations
-	if cfg.AppPort == "" {
-		log.Fatal("APP_PORT is required")
-	}
-	if cfg.JWTSecret == "" {
-		log.Fatal("JWT_SECRET is required")
-	}
-
 	if err := logger.InitLogger(); err != nil {
 		log.Fatalf("Failed to initialize logger: %v", err)
 	}

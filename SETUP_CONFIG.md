@@ -1,50 +1,88 @@
-# Setup Konfigurasi
+# Configuration Setup
 
 ## Setup untuk Development
 
 1. **Copy template konfigurasi**:
+
 ```bash
 cp config.example.yaml config.yaml
 ```
 
-2. **Set environment variables yang required**:
-```bash
-export DATABASE_URL="postgres://username:password@localhost:5432/database_name"
-export JWT_SECRET="your-super-secret-jwt-key-here-minimum-32-characters"
-```
+2. **Edit config.yaml dengan values yang sesuai**:
 
-3. **Edit config.yaml sesuai kebutuhan** (opsional):
 ```bash
 nano config.yaml
 ```
 
-4. **Jalankan aplikasi**:
+Pastikan untuk mengubah minimal:
+- `database.url`: URL PostgreSQL database Anda
+- `security.jwt_secret`: Secret key untuk JWT (minimal 32 karakter)
+
+3. **Jalankan aplikasi**:
+
 ```bash
 go run cmd/api/main.go
 ```
 
-## Setup untuk Production
+## Konfigurasi yang Diperlukan
 
-Untuk production, gunakan environment variables saja (jangan menggunakan config.yaml):
+### Database
+- URL: `postgres://username:password@localhost:5432/database_name`
+- Connection pooling: max idle/open connections, connection lifetime
 
-```bash
-export DATABASE_URL="postgres://prod_user:prod_pass@prod_host:5432/prod_db"
-export JWT_SECRET="super-secure-production-secret"
-export GO_API_APP_ENVIRONMENT="production"
-export GO_API_APP_PORT="8080"
-# ... environment variables lainnya sesuai kebutuhan
-```
+### Security  
+- JWT Secret: Minimal 32 karakter untuk production
+- JWT Expiry: Default 24 jam
+- Trusted proxies: Untuk production behind load balancer
 
-## Prioritas Konfigurasi
+### Application
+- Port: Default 8000
+- Environment: development/production
+- Timeouts: read, write, idle, shutdown
 
-1. **Environment Variables** (tertinggi) - `DATABASE_URL`, `JWT_SECRET`, `GO_API_*`
-2. **config.yaml file** 
-3. **Default values** (terendah)
+### CORS
+- Allowed origins: Frontend URL
+- Allowed methods: HTTP methods yang diizinkan
+- Allowed headers: Headers yang diizinkan
+
+### Rate Limiting
+- Max requests per window
+- Time window duration
+- Enable/disable rate limiting
+
+### Logging
+- Log directory: Default storage/logs
+- Max file size: Default 10MB
+- Log retention: Default 30 hari
+- Daily rotation: Default enabled
 
 ## File yang Ignored dari Git
 
-- `config.yaml` - Untuk menghindari commit secrets
-- `.env` files - Legacy environment files
+- `config.yaml` - Berisi secrets dan konfigurasi lokal
+- File ini tidak akan di-commit ke repository untuk keamanan
+
+## Troubleshooting
+
+### Config file not found
+```
+Config file 'config.yaml' not found. Please copy from config.example.yaml
+```
+**Solusi**: Copy `config.example.yaml` ke `config.yaml` dan edit sesuai kebutuhan
+
+### Required configurations missing
+```
+Required configurations need to be updated in config.yaml: [database.url security.jwt_secret]
+```
+**Solusi**: Edit `config.yaml` dan ubah placeholder values dengan values yang sebenarnya
+
+### Database connection failed
+```
+failed to connect to database
+```
+**Solusi**: 
+1. Pastikan PostgreSQL berjalan
+2. Check database URL di `config.yaml`
+3. Pastikan database dan user sudah dibuat
 
 ## File yang Di-commit ke Git
 

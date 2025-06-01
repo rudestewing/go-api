@@ -2,7 +2,6 @@ package config
 
 import (
 	"log"
-	"strings"
 	"time"
 
 	"github.com/spf13/viper"
@@ -44,7 +43,7 @@ type Config struct {
 
 var GlobalConfig *Config
 
-// InitConfig initializes viper configuration
+// InitConfig initializes viper configuration from config.yaml only
 func InitConfig() {
 	// Set config file name and paths
 	viper.SetConfigName("config")
@@ -53,23 +52,15 @@ func InitConfig() {
 	viper.AddConfigPath("./config")
 	viper.AddConfigPath("$HOME/.go-api")
 
-	// Enable reading from environment variables
-	viper.AutomaticEnv()
-	viper.SetEnvPrefix("GO_API")
-	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
-
-	// Bind specific environment variables for backward compatibility
-	bindEnvironmentVariables()
-
 	// Set default values
 	setDefaults()
 
-	// Read config file (optional, fallback to env vars and defaults)
+	// Read config file (required)
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
-			log.Println("Config file not found, using environment variables and defaults")
+			log.Fatal("Config file 'config.yaml' not found. Please copy from config.example.yaml")
 		} else {
-			log.Printf("Error reading config file: %v", err)
+			log.Fatalf("Error reading config file: %v", err)
 		}
 	} else {
 		log.Printf("Using config file: %s", viper.ConfigFileUsed())
@@ -84,16 +75,19 @@ func InitConfig() {
 	log.Println("Configuration loaded successfully")
 }
 
-func bindEnvironmentVariables() {
-	// Bind only required environment variables for security
-	viper.BindEnv("database_url", "DATABASE_URL")
-	viper.BindEnv("jwt_secret", "JWT_SECRET")
-	
-	// Optional: Allow GO_API_ prefixed environment variables to override config.yaml
-	// Example: GO_API_APP_PORT=8080 will override app.port in config.yaml
-}
-
 func setDefaults() {
+	// Database defaults
+	viper.SetDefault("database.url", "postgres://username:password@localhost:5432/database_name")
+	viper.SetDefault("database.max_idle_conns", 10)
+	viper.SetDefault("database.max_open_conns", 100)
+	viper.SetDefault("database.max_lifetime", time.Hour)
+
+	// Security defaults
+	viper.SetDefault("security.jwt_secret", "your-super-secret-jwt-key-here")
+	viper.SetDefault("security.jwt_expiry", 24*time.Hour)
+	viper.SetDefault("security.headers_enabled", true)
+	viper.SetDefault("security.trusted_proxies", "")
+
 	// App defaults
 	viper.SetDefault("app.port", "8000")
 	viper.SetDefault("app.environment", "development")
@@ -101,11 +95,6 @@ func setDefaults() {
 	viper.SetDefault("app.write_timeout", 30*time.Second)
 	viper.SetDefault("app.idle_timeout", 120*time.Second)
 	viper.SetDefault("app.shutdown_timeout", 10*time.Second)
-
-	// Security defaults
-	viper.SetDefault("security.jwt_expiry", 24*time.Hour)
-	viper.SetDefault("security.headers_enabled", true)
-	viper.SetDefault("security.trusted_proxies", "")
 
 	// CORS defaults
 	viper.SetDefault("cors.allowed_origins", "http://localhost:3000")
@@ -117,11 +106,6 @@ func setDefaults() {
 	viper.SetDefault("rate_limit.max", 100)
 	viper.SetDefault("rate_limit.window", time.Minute)
 
-	// Database defaults
-	viper.SetDefault("database.max_idle_conns", 10)
-	viper.SetDefault("database.max_open_conns", 100)
-	viper.SetDefault("database.max_lifetime", time.Hour)
-
 	// Logging defaults
 	viper.SetDefault("logging.dir", "storage/logs")
 	viper.SetDefault("logging.max_size", 10*1024*1024) // 10MB
@@ -131,9 +115,14 @@ func setDefaults() {
 
 func buildConfig() {
 	GlobalConfig = &Config{
-		// Required from env
-		DatabaseURL: viper.GetString("database_url"),
-		JWTSecret:   viper.GetString("jwt_secret"),
+		// Database from config.yaml
+		DatabaseURL: viper.GetString("database.url"),
+		
+		// Security from config.yaml  
+		JWTSecret: viper.GetString("security.jwt_secret"),
+		JWTExpiry: viper.GetDuration("security.jwt_expiry"),
+		SecurityHeadersEnabled: viper.GetBool("security.headers_enabled"),
+		TrustedProxies: viper.GetString("security.trusted_proxies"),
 
 		// App configurations
 		AppPort:         viper.GetString("app.port"),
@@ -142,11 +131,6 @@ func buildConfig() {
 		WriteTimeout:    viper.GetDuration("app.write_timeout"),
 		IdleTimeout:     viper.GetDuration("app.idle_timeout"),
 		ShutdownTimeout: viper.GetDuration("app.shutdown_timeout"),
-
-		// Security configurations
-		JWTExpiry:              viper.GetDuration("security.jwt_expiry"),
-		SecurityHeadersEnabled: viper.GetBool("security.headers_enabled"),
-		TrustedProxies:         viper.GetString("security.trusted_proxies"),
 
 		// CORS configurations
 		AllowedOrigins: viper.GetString("cors.allowed_origins"),
@@ -173,19 +157,23 @@ func buildConfig() {
 
 func validateConfig() {
 	requiredConfigs := map[string]string{
-		"DATABASE_URL": GlobalConfig.DatabaseURL,
-		"JWT_SECRET":   GlobalConfig.JWTSecret,
+		"database.url":        GlobalConfig.DatabaseURL,
+		"security.jwt_secret": GlobalConfig.JWTSecret,
 	}
 
 	var missingConfigs []string
 	for key, value := range requiredConfigs {
-		if value == "" {
+		// Check if values are empty or still contain default placeholder values
+		if value == "" || 
+		   value == "postgres://username:password@localhost:5432/database_name" || 
+		   value == "your-super-secret-jwt-key-here" ||
+		   value == "your-super-secret-jwt-key-here-minimum-32-characters" {
 			missingConfigs = append(missingConfigs, key)
 		}
 	}
 
 	if len(missingConfigs) > 0 {
-		log.Fatalf("Required configurations are missing: %v", missingConfigs)
+		log.Fatalf("Required configurations need to be updated in config.yaml: %v", missingConfigs)
 	}
 }
 
