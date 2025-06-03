@@ -29,13 +29,13 @@ func NewAuthService(userRepo *repository.UserRepository, roleRepo *repository.Ro
 	}
 }
 
-func (s *AuthService) Login(ctx context.Context, email, password string) (*model.AccessToken, error) {
-	user, err := s.userRepo.FindByEmail(ctx, email)
+func (s *AuthService) Login(ctx context.Context, req *dto.LoginRequest) (*model.AccessToken, error) {
+	user, err := s.userRepo.FindByEmail(ctx, req.Email)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
 		return nil, errors.New("invalid credentials")
 	}
 
