@@ -4,11 +4,9 @@ import (
 	"go-api/app/dto"
 	"go-api/app/middleware"
 	"go-api/app/service"
-	"go-api/app/shared/errors"
 	"go-api/app/shared/response"
 	"go-api/app/shared/validator"
 	"go-api/container"
-	"strings"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -38,27 +36,28 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 
 	// Parse JSON body
 	if err := c.BodyParser(&req); err != nil {
-		return response.HandleAppError(c, errors.ErrInvalidRequestBody)
+		return response.BadRequest(c, "Invalid request body")
 	}
 
 	// Validate request
 	if err := validator.ValidateStruct(&req); err != nil {
-		return response.HandleAppError(c, err)
+		return response.ValidationError(c, err.Error())
 	}
 
 	// Gunakan context dari Fiber yang sudah memiliki timeout dari middleware
 	ctx := c.UserContext()
+
 	// Call service with timeout context
-	accessToken, err := h.authService.Login(ctx, &req)
+	accessToken, err := h.authService.Login(ctx, req.Email, req.Password)
 	if err != nil {
-		return response.HandleAppError(c, errors.ErrInvalidCredentials)
+		return response.Unauthorized(c, err.Error())
 	}
 
 	return response.Success(c, fiber.Map{
 		"access_token": accessToken.Token,
 		"expires_at":   accessToken.ExpiresAt,
 		"user":         accessToken.User,
-	}, "Login successful")
+	})
 }
 
 func (h *AuthHandler) Register(c *fiber.Ctx) error {
@@ -66,23 +65,25 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 
 	// Parse JSON body
 	if err := c.BodyParser(&req); err != nil {
-		return response.HandleAppError(c, errors.ErrInvalidRequestBody)
+		return response.BadRequest(c, "Invalid request body")
 	}
 
 	// Validate request structure
 	if err := validator.ValidateStruct(&req); err != nil {
-		return response.HandleAppError(c, err)
+		return response.ValidationError(c, err.Error())
+	}
+
+	// Additional password validation
+	if err := validator.ValidatePassword(req.Password); err != nil {
+		return response.ValidationError(c, err.Error())
 	}
 
 	// Gunakan context dari Fiber yang sudah memiliki timeout dari middleware
 	ctx := c.UserContext()
+
 	// Call service with context
 	if err := h.authService.Register(ctx, &req); err != nil {
-		// Check if it's an email already exists error
-		if strings.Contains(err.Error(), "email") {
-			return response.HandleAppError(c, errors.ErrEmailAlreadyExists)
-		}
-		return response.HandleAppError(c, errors.NewInternalServerError("Registration failed", err.Error()))
+		return response.BadRequest(c, err.Error())
 	}
 
 	// Send welcome email in background (don't block the response)
@@ -95,14 +96,14 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 		}
 	}()
 
-	return response.Created(c, nil, "User registered successfully")
+	return response.Success(c, nil, "User registered successfully")
 }
 
 func (h *AuthHandler) Logout(c *fiber.Ctx) error {
 	// Get token from Authorization header
 	authHeader := c.Get("Authorization")
 	if authHeader == "" {
-		return response.HandleAppError(c, errors.ErrUnauthorized)
+		return response.Unauthorized(c, "Authorization header required")
 	}
 
 	// Extract token (assuming Bearer token format)
@@ -115,7 +116,7 @@ func (h *AuthHandler) Logout(c *fiber.Ctx) error {
 	ctx := c.UserContext()
 
 	if err := h.authService.Logout(ctx, token); err != nil {
-		return response.HandleAppError(c, errors.NewInternalServerError("Failed to logout", err.Error()))
+		return response.InternalError(c, "Failed to logout")
 	}
 
 	return response.Success(c, nil, "Logged out successfully")
@@ -125,15 +126,15 @@ func (h *AuthHandler) LogoutAll(c *fiber.Ctx) error {
 	// Get user from context (set by auth middleware)
 	userID := c.Locals("user_id")
 	if userID == nil {
-		return response.HandleAppError(c, errors.ErrUnauthorized)
+		return response.Unauthorized(c, "Unauthorized")
 	}
 
 	// Use context from Fiber that already has timeout from middleware
 	ctx := c.UserContext()
 
 	if err := h.authService.LogoutAll(ctx, userID.(uint)); err != nil {
-		return response.HandleAppError(c, errors.NewInternalServerError("Failed to logout from all devices", err.Error()))
-		}
+		return response.InternalError(c, "Failed to logout from all devices")
+	}
 
 	return response.Success(c, nil, "Logged out from all devices successfully")
 }

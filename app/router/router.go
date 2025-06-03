@@ -11,30 +11,13 @@ import (
 )
 
 func RegisterRoutes(app *fiber.App, container *container.Container) {
-	// Global middlewares
-	app.Use(middleware.RecoverMiddleware())
-	app.Use(middleware.ErrorHandler())
-	
-	// API routes
 	router := app.Group("/api/v1")
 	router.Use(middleware.TimeoutMiddleware(30*time.Second, "Operation timed out"))
 
 	router.Get("/", func(c *fiber.Ctx) error {
-		return response.Success(c, nil, "API is running", "Welcome to Go API v1")
+		return response.Success(c, nil, "hello from v1", "API is running")
 	})
 
-	// Health check endpoint
-	router.Get("/health", func(c *fiber.Ctx) error {
-		return response.Success(c, map[string]interface{}{
-			"status":    "healthy",
-			"timestamp": time.Now().Format(time.RFC3339),
-			"version":   "1.0.0",
-		}, "Service is healthy")
-	})
-
-	// Register handlers here...
+	// register handlers here...
 	handler.RegisterAuthHandler(router, container)
-	
-	// Handle 404 for API routes
-	router.Use(middleware.NotFoundHandler())
 }
