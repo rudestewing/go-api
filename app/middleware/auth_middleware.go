@@ -22,8 +22,11 @@ func AuthMiddleware(authService *service.AuthService) fiber.Handler {
 			token = authHeader[7:]
 		}
 
-		// Validate token using auth service
-		accessToken, err := authService.ValidateToken(token)
+		// Get context with timeout from middleware
+		ctx := c.UserContext()
+
+		// Validate token using auth service with context
+		accessToken, err := authService.ValidateToken(ctx, token)
 		if err != nil {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 				"error": "Invalid or expired token",

@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"go-api/app/handler"
 	"go-api/app/router"
 	"go-api/app/shared/logger"
 	"go-api/config"
@@ -127,11 +126,8 @@ func main() {
 		logger.LogFatal("Failed to create container: %v", err_container)
 	}
 
-	// Initialize Handler
-	handler := handler.NewHandler(container)
-
 	// Setup Routes
-	router.RegisterRoutes(app, handler, container.AuthService)
+	router.RegisterRoutes(app, container)
 
 	port := ":" + cfg.AppPort
 	logger.LogInfo("🚀 Server starting on port %s...", cfg.AppPort)

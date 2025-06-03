@@ -40,7 +40,7 @@ func (s *AuthService) Login(ctx context.Context, email, password string) (*model
 	}
 
 	// Create access token
-	accessToken, err := s.accessTokenRepo.Create(user.ID, s.tokenExpiry)
+	accessToken, err := s.accessTokenRepo.Create(ctx, user.ID, s.tokenExpiry)
 	if err != nil {
 		return nil, err
 	}
@@ -48,8 +48,8 @@ func (s *AuthService) Login(ctx context.Context, email, password string) (*model
 	return accessToken, nil
 }
 
-func (s *AuthService) ValidateToken(token string) (*model.AccessToken, error) {
-	accessToken, err := s.accessTokenRepo.FindByToken(token)
+func (s *AuthService) ValidateToken(ctx context.Context, token string) (*model.AccessToken, error) {
+	accessToken, err := s.accessTokenRepo.FindByToken(ctx, token)
 	if err != nil {
 		return nil, err
 	}
@@ -61,12 +61,12 @@ func (s *AuthService) ValidateToken(token string) (*model.AccessToken, error) {
 	return accessToken, nil
 }
 
-func (s *AuthService) Logout(token string) error {
-	return s.accessTokenRepo.RevokeToken(token)
+func (s *AuthService) Logout(ctx context.Context, token string) error {
+	return s.accessTokenRepo.RevokeToken(ctx, token)
 }
 
-func (s *AuthService) LogoutAll(userID uint) error {
-	return s.accessTokenRepo.RevokeAllUserTokens(userID)
+func (s *AuthService) LogoutAll(ctx context.Context, userID uint) error {
+	return s.accessTokenRepo.RevokeAllUserTokens(ctx, userID)
 }
 
 func (s *AuthService) Register(ctx context.Context, req *dto.RegisterRequest) error {

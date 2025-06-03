@@ -2,9 +2,11 @@ package handler
 
 import (
 	"go-api/app/dto"
+	"go-api/app/middleware"
 	"go-api/app/service"
 	"go-api/app/shared/response"
 	"go-api/app/shared/validator"
+	"go-api/container"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -14,11 +16,19 @@ type AuthHandler struct {
 	emailService *service.EmailService
 }
 
-func NewAuthHandler(authService *service.AuthService, emailService *service.EmailService) *AuthHandler {
-	return &AuthHandler{
-		authService:  authService,
-		emailService: emailService,
+func RegisterAuthHandler(router fiber.Router, container *container.Container) { 
+	h := &AuthHandler{
+		authService:  container.AuthService,
+		emailService: container.EmailService,
 	}
+
+	public := router.Group("/auth")
+	public.Post("/register", h.Register)
+	public.Post("/login", h.Login)
+	
+	protected := router.Use(middleware.AuthMiddleware(container.AuthService))
+	protected.Post("/logout", h.Logout)
+	protected.Post("/logout-all", h.LogoutAll)
 }
 
 func (h *AuthHandler) Login(c *fiber.Ctx) error {
@@ -102,7 +112,10 @@ func (h *AuthHandler) Logout(c *fiber.Ctx) error {
 		token = authHeader[7:]
 	}
 
-	if err := h.authService.Logout(token); err != nil {
+	// Use context from Fiber that already has timeout from middleware
+	ctx := c.UserContext()
+
+	if err := h.authService.Logout(ctx, token); err != nil {
 		return response.InternalError(c, "Failed to logout")
 	}
 
@@ -116,7 +129,10 @@ func (h *AuthHandler) LogoutAll(c *fiber.Ctx) error {
 		return response.Unauthorized(c, "Unauthorized")
 	}
 
-	if err := h.authService.LogoutAll(userID.(uint)); err != nil {
+	// Use context from Fiber that already has timeout from middleware
+	ctx := c.UserContext()
+
+	if err := h.authService.LogoutAll(ctx, userID.(uint)); err != nil {
 		return response.InternalError(c, "Failed to logout from all devices")
 	}
 
