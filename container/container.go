@@ -16,7 +16,6 @@ type Container struct {
 	Config       *config.Config
 	DB           *gorm.DB
 	AuthService  *service.AuthService
-	UserService  *service.UserService
 	EmailService *service.EmailService
 }
 
@@ -32,17 +31,14 @@ func NewContainer() (*Container, error) {
 	userRepo := repository.NewUserRepository(db)
 	roleRepo := repository.NewRoleRepository(db)
 	accessTokenRepo := repository.NewAccessTokenRepository(db)
-
 	// Initialize services
 	authService := service.NewAuthService(userRepo, roleRepo, accessTokenRepo)
-	userService := service.NewUserService(userRepo)
 	emailService := service.NewEmailService(cfg)
 
 	container := &Container{
 		Config:       cfg,
 		DB:           db,
 		AuthService:  authService,
-		UserService:  userService,
 		EmailService: emailService,
 	}
 

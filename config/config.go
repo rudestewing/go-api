@@ -233,51 +233,6 @@ func Get() *Config {
 	return GlobalConfig
 }
 
-// Viper helper functions for direct access to viper instance
-func GetString(key string) string {
-	return viper.GetString(key)
-}
-
-func GetInt(key string) int {
-	return viper.GetInt(key)
-}
-
-func GetBool(key string) bool {
-	return viper.GetBool(key)
-}
-
-func GetDuration(key string) time.Duration {
-	return viper.GetDuration(key)
-}
-
-func GetFloat64(key string) float64 {
-	return viper.GetFloat64(key)
-}
-
-func GetStringSlice(key string) []string {
-	return viper.GetStringSlice(key)
-}
-
-func Set(key string, value interface{}) {
-	viper.Set(key, value)
-}
-
-func IsSet(key string) bool {
-	return viper.IsSet(key)
-}
-
-func AllKeys() []string {
-	return viper.AllKeys()
-}
-
-func WriteConfig() error {
-	return viper.WriteConfig()
-}
-
-func WriteConfigAs(filename string) error {
-	return viper.WriteConfigAs(filename)
-}
-
 // Timezone helper functions
 
 // Now returns the current time in the configured timezone
