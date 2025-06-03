@@ -9,7 +9,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func RegisterRoutes(app *fiber.App, container *container.Container) {
+func RegisterRoutes(app *fiber.App, handler *handler.Handler, container *container.Container) {
 	router := app.Group("/api/v1")
 	router.Use(middleware.TimeoutMiddleware(30*time.Second, "Operation timed out"))
 	router.Get("/", func(c *fiber.Ctx) error {
@@ -19,6 +19,11 @@ func RegisterRoutes(app *fiber.App, container *container.Container) {
 		})
 	})
 
-	// register handlers here...
-	handler.RegisterAuthHandler(router, container)
+	auth := router.Group("/auth")
+	auth.Post("/login", handler.AuthHandler.Login)
+	auth.Post("/register", handler.AuthHandler.Register)
+
+	protectedAuth :=  auth.Use(middleware.AuthMiddleware(container.AuthService))
+	protectedAuth.Post("/logout", handler.AuthHandler.Logout)
+	protectedAuth.Post("logout-all", handler.AuthHandler.LogoutAll)
 }

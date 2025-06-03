@@ -3,31 +3,22 @@ package handler
 import (
 	"go-api/app/dto"
 	"go-api/app/service"
-	"go-api/container"
-	"go-api/middleware"
+	"go-api/infrastructure/mail"
 	"go-api/shared/validator"
 
 	"github.com/gofiber/fiber/v2"
 )
 
 type AuthHandler struct {
-	authService  *service.AuthService
-	emailService *service.EmailService
+	AuthService  *service.AuthService
+	EmailService *mail.EmailService
 }
 
-func RegisterAuthHandler(router fiber.Router, container *container.Container) { 
-	h := &AuthHandler{
-		authService:  container.AuthService,
-		emailService: container.EmailService,
+func NewAuthHandler(authService *service.AuthService, emailService *mail.EmailService) *AuthHandler {
+	return &AuthHandler{
+		AuthService:  authService,
+		EmailService: emailService,
 	}
-
-	public := router.Group("/auth")
-	public.Post("/register", h.Register)
-	public.Post("/login", h.Login)
-	
-	protected := router.Use(middleware.AuthMiddleware(container.AuthService))
-	protected.Post("/logout", h.Logout)
-	protected.Post("/logout-all", h.LogoutAll)
 }
 
 func (h *AuthHandler) Login(c *fiber.Ctx) error {
@@ -53,7 +44,7 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	ctx := c.UserContext()
 
 	// Call service with timeout context
-	accessToken, err := h.authService.Login(ctx, req.Email, req.Password)
+	accessToken, err := h.AuthService.Login(ctx, req.Email, req.Password)
 	if err != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 			"data":    nil,
@@ -102,7 +93,7 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 	ctx := c.UserContext()
 
 	// Call service with context
-	if err := h.authService.Register(ctx, &req); err != nil {
+	if err := h.AuthService.Register(ctx, &req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"data":    nil,
 			"message": err.Error(),
@@ -111,7 +102,7 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 
 	// Send welcome email in background (don't block the response)
 	go func() {
-		if err := h.emailService.SendWelcomeEmail(req.Email, req.Name); err != nil {
+		if err := h.EmailService.SendWelcomeEmail(req.Email, req.Name); err != nil {
 			// Log the error but don't fail the registration
 			// You might want to use your logger here
 			// For now, we'll just continue silently
@@ -144,7 +135,7 @@ func (h *AuthHandler) Logout(c *fiber.Ctx) error {
 	// Use context from Fiber that already has timeout from middleware
 	ctx := c.UserContext()
 
-	if err := h.authService.Logout(ctx, token); err != nil {
+	if err := h.AuthService.Logout(ctx, token); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"data":    nil,
 			"message": "Failed to logout",
@@ -170,7 +161,7 @@ func (h *AuthHandler) LogoutAll(c *fiber.Ctx) error {
 	// Use context from Fiber that already has timeout from middleware
 	ctx := c.UserContext()
 
-	if err := h.authService.LogoutAll(ctx, userID.(uint)); err != nil {
+	if err := h.AuthService.LogoutAll(ctx, userID.(uint)); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"data":    nil,
 			"message": "Failed to logout from all devices",
