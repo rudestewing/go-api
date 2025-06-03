@@ -2,10 +2,10 @@ package main
 
 import (
 	"context"
-	"go-api/app/router"
-	"go-api/app/shared/logger"
 	"go-api/config"
 	"go-api/container"
+	"go-api/router"
+	"go-api/shared/logger"
 	"log"
 	"os"
 	"os/signal"

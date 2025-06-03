@@ -2,9 +2,9 @@ package main
 
 import (
 	"go-api/app/model"
-	"go-api/app/shared/constant"
 	"go-api/config"
 	"go-api/database"
+	"go-api/shared/constant"
 	"log"
 
 	"gorm.io/gorm"

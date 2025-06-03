@@ -2,10 +2,10 @@ package handler
 
 import (
 	"go-api/app/dto"
-	"go-api/app/middleware"
 	"go-api/app/service"
-	"go-api/app/shared/validator"
 	"go-api/container"
+	"go-api/middleware"
+	"go-api/shared/validator"
 
 	"github.com/gofiber/fiber/v2"
 )

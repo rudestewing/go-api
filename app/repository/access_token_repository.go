@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"go-api/app/model"
-	"go-api/app/shared/timezone"
+	"go-api/shared/timezone"
 
 	"gorm.io/gorm"
 )

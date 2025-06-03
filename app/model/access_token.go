@@ -1,7 +1,7 @@
 package model
 
 import (
-	"go-api/app/shared/timezone"
+	"go-api/shared/timezone"
 	"time"
 )
 

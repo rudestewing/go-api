@@ -6,8 +6,8 @@ import (
 	"go-api/app/dto"
 	"go-api/app/model"
 	"go-api/app/repository"
-	"go-api/app/shared/constant"
 	"go-api/config"
+	"go-api/shared/constant"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"

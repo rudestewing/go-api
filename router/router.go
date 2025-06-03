@@ -2,8 +2,8 @@ package router
 
 import (
 	"go-api/app/handler"
-	"go-api/app/middleware"
 	"go-api/container"
+	"go-api/middleware"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
