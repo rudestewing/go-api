@@ -1,12 +1,15 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"go-api/config"
 	"go-api/database/migration"
 	"log"
 	"os"
+	"regexp"
 	"strconv"
+	"strings"
 )
 
 func main() {
@@ -19,6 +22,14 @@ func main() {
 	config.InitConfig()
 
 	command := os.Args[1]
+
+	// Validate command before processing
+	if !isValidCommand(command) {
+		fmt.Printf("Unknown command: %s\n\n", command)
+		showUsage()
+		return
+	}
+
 	switch command {
 	case "migrate", "up":
 		runMigrations()
@@ -30,22 +41,35 @@ func main() {
 		if len(os.Args) < 3 {
 			log.Fatal("Migration name is required. Usage: go run cmd/migrate/main.go create \"migration_name\"")
 		}
+		if err := validateMigrationName(os.Args[2]); err != nil {
+			log.Fatalf("Invalid migration name: %v", err)
+		}
 		createMigration(os.Args[2])
 	case "force":
 		if len(os.Args) < 3 {
 			log.Fatal("Version is required. Usage: go run cmd/migrate/main.go force <version>")
 		}
-		forceVersion(os.Args[2])
+		version, err := validateAndParseVersion(os.Args[2])
+		if err != nil {
+			log.Fatalf("Invalid version: %v", err)
+		}
+		forceVersion(version)
 	case "drop":
+		if err := confirmDangerousOperation("drop all database tables"); err != nil {
+			log.Fatalf("Operation cancelled: %v", err)
+		}
 		dropDatabase()
 	case "fresh":
+		if err := confirmDangerousOperation("drop and recreate all database tables"); err != nil {
+			log.Fatalf("Operation cancelled: %v", err)
+		}
 		runFreshMigrations()
 	case "purge":
+		if err := confirmDangerousOperation("purge all migrations"); err != nil {
+			log.Fatalf("Operation cancelled: %v", err)
+		}
 		purgeMigrations()
 	case "help", "--help", "-h":
-		showUsage()
-	default:
-		fmt.Printf("Unknown command: %s\n\n", command)
 		showUsage()
 	}
 }
@@ -104,17 +128,7 @@ func createMigration(name string) {
 	}
 }
 
-func forceVersion(versionStr string) {
-	// Import strconv for string to int conversion
-	version := 0
-	if versionStr != "0" {
-		var err error
-		version, err = strconv.Atoi(versionStr)
-		if err != nil {
-			log.Fatalf("Invalid version number: %v", err)
-		}
-	}
-
+func forceVersion(version int) {
 	manager, err := migration.NewMigrationManager()
 	if err != nil {
 		log.Fatalf("Failed to create migration manager: %v", err)
@@ -226,4 +240,91 @@ func showUsage() {
 	fmt.Println("  - fresh:        Drop all tables and re-apply all migrations (DESTRUCTIVE)")
 	fmt.Println("  - purge:        Rollback all migrations to version 0 (preserves tables)")
 	fmt.Println("  - drop:         Drop all database tables (DESTRUCTIVE)")
+}
+
+// isValidCommand checks if the command is in the list of valid commands
+func isValidCommand(command string) bool {
+	validCommands := []string{
+		"migrate", "up", "rollback", "down", "status", "create",
+		"force", "drop", "fresh", "purge", "help", "--help", "-h",
+	}
+	for _, valid := range validCommands {
+		if command == valid {
+			return true
+		}
+	}
+	return false
+}
+
+// validateMigrationName ensures migration name follows proper naming conventions
+func validateMigrationName(name string) error {
+	if name == "" {
+		return fmt.Errorf("migration name cannot be empty")
+	}
+
+	// Check length
+	if len(name) > 50 {
+		return fmt.Errorf("migration name cannot exceed 50 characters")
+	}
+
+	// Check for valid characters (alphanumeric, underscore, hyphen)
+	validName := regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
+	if !validName.MatchString(name) {
+		return fmt.Errorf("migration name can only contain letters, numbers, underscores, and hyphens")
+	}
+
+	// Check it doesn't start with number
+	if regexp.MustCompile(`^[0-9]`).MatchString(name) {
+		return fmt.Errorf("migration name cannot start with a number")
+	}
+
+	return nil
+}
+
+// validateAndParseVersion validates and parses version number
+func validateAndParseVersion(versionStr string) (int, error) {
+	version, err := strconv.Atoi(versionStr)
+	if err != nil {
+		return 0, fmt.Errorf("version must be a valid integer")
+	}
+
+	if version < 0 {
+		return 0, fmt.Errorf("version cannot be negative")
+	}
+
+	return version, nil
+}
+
+// confirmDangerousOperation asks for user confirmation for destructive operations
+func confirmDangerousOperation(operation string) error {
+	cfg := config.Get()
+
+	// Skip confirmation in non-production environments if explicitly configured
+	if cfg.Environment != "production" {
+		fmt.Printf("⚠️  This will %s. Continue? (y/N): ", operation)
+	} else {
+		fmt.Printf("🚨 PRODUCTION ENVIRONMENT DETECTED! 🚨\n")
+		fmt.Printf("This will %s in PRODUCTION!\n", operation)
+		fmt.Printf("Type 'YES I UNDERSTAND' to continue: ")
+	}
+
+	reader := bufio.NewReader(os.Stdin)
+	response, err := reader.ReadString('\n')
+	if err != nil {
+		return fmt.Errorf("failed to read user input: %w", err)
+	}
+
+	response = strings.TrimSpace(response)
+
+	if cfg.Environment == "production" {
+		if response != "YES I UNDERSTAND" {
+			return fmt.Errorf("operation cancelled - exact confirmation required")
+		}
+	} else {
+		if !strings.EqualFold(response, "y") && !strings.EqualFold(response, "yes") {
+			return fmt.Errorf("operation cancelled by user")
+		}
+	}
+
+	return nil
 }

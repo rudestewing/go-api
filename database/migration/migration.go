@@ -266,16 +266,33 @@ func (m *MigrationManager) Purge() error {
 }
 
 func (m *MigrationManager) Close() error {
+	var errs []error
+
 	if m.migrate != nil {
 		if sourceErr, dbErr := m.migrate.Close(); sourceErr != nil || dbErr != nil {
-			return fmt.Errorf("failed to close migrate instance: source=%v, db=%v", sourceErr, dbErr)
+			if sourceErr != nil {
+				errs = append(errs, fmt.Errorf("source close error: %w", sourceErr))
+			}
+			if dbErr != nil {
+				errs = append(errs, fmt.Errorf("database close error: %w", dbErr))
+			}
 		}
 	}
 
 	if m.db != nil {
-		return m.db.Close()
+		if err := m.db.Close(); err != nil {
+			errs = append(errs, fmt.Errorf("database connection close error: %w", err))
+		}
 	}
 
+	if len(errs) > 0 {
+		// Combine all errors into a single error message
+		var errorMessages []string
+		for _, err := range errs {
+			errorMessages = append(errorMessages, err.Error())
+		}
+		return fmt.Errorf("multiple close errors: %s", strings.Join(errorMessages, "; "))
+	}
 	return nil
 }
 

@@ -2,6 +2,7 @@ package config
 
 import (
 	"log"
+	"strings"
 	"time"
 
 	"github.com/spf13/viper"
@@ -222,6 +223,26 @@ func validateConfig() {
 
 	if len(missingConfigs) > 0 {
 		log.Fatalf("Required configurations need to be updated in config.yaml: %v", missingConfigs)
+	}
+
+	// Additional security validations
+	if len(GlobalConfig.JWTSecret) < 32 {
+		log.Fatalf("JWT secret must be at least 32 characters long for security")
+	}
+
+	// Validate database URL format and SSL requirements
+	if !strings.Contains(GlobalConfig.DatabaseURL, "sslmode") {
+		log.Printf("Warning: Database connection should specify SSL mode for production")
+	}
+
+	// Validate environment-specific settings
+	if GlobalConfig.Environment == "production" {
+		if !GlobalConfig.SecurityHeadersEnabled {
+			log.Printf("Warning: Security headers should be enabled in production")
+		}
+		if !GlobalConfig.RateLimitEnabled {
+			log.Printf("Warning: Rate limiting should be enabled in production")
+		}
 	}
 }
 

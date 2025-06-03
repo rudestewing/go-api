@@ -5,6 +5,7 @@ import (
 	"go-api/app/handler"
 	"go-api/config"
 	"go-api/container"
+	"go-api/middleware"
 	"go-api/router"
 	"go-api/shared/logger"
 	"log"
@@ -16,7 +17,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/helmet"
-	"github.com/gofiber/fiber/v2/middleware/limiter"
 	fiberLogger "github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 )
@@ -45,25 +45,30 @@ func createFiberApp() *fiber.App {
 		},
 	})
 
-	// Middleware
+	// Middleware order is important!
 	app.Use(recover.New())
+
+	// Request ID for tracing
+	app.Use(middleware.RequestIDMiddleware())
+
+	// Error handling (should be early in the chain)
+	app.Use(middleware.ErrorHandlingMiddleware())
+
+	// Configuration validation
+	app.Use(middleware.ConfigValidationMiddleware())
+
+	// Input validation middleware (before other processing)
+	app.Use(middleware.ContentTypeValidationMiddleware())
+	app.Use(middleware.InputValidationMiddleware())
 
 	// Security Headers (helmet)
 	if cfg.SecurityHeadersEnabled {
 		app.Use(helmet.New())
 	}
 
-	// Rate Limiting
+	// Rate Limiting (general)
 	if cfg.RateLimitEnabled {
-		app.Use(limiter.New(limiter.Config{
-			Max:        cfg.RateLimitMax,
-			Expiration: cfg.RateLimitWindow,
-			LimitReached: func(c *fiber.Ctx) error {
-				return c.Status(429).JSON(fiber.Map{
-					"error": "Too many requests, please try again later",
-				})
-			},
-		}))
+		app.Use(middleware.RateLimitMiddleware())
 	}
 
 	// Health check endpoint

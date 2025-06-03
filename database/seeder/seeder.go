@@ -20,9 +20,27 @@ type SeederInterface interface {
 
 // RunSeederFile runs a specific seeder file by compiling and executing it
 func RunSeederFile(filePath string) error {
-	// Check if file exists
-	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+	// Security validation - ensure seeder files are in the correct directory
+	if !strings.HasPrefix(filePath, "database/seeders/") {
+		return fmt.Errorf("seeder files must be in database/seeders/ directory")
+	}
+
+	if !strings.HasSuffix(filePath, ".go") {
+		return fmt.Errorf("seeder files must have .go extension")
+	}
+
+	// Check if file exists and validate it's readable
+	fileInfo, err := os.Stat(filePath)
+	if os.IsNotExist(err) {
 		return fmt.Errorf("seeder file does not exist: %s", filePath)
+	}
+	if err != nil {
+		return fmt.Errorf("cannot access seeder file %s: %w", filePath, err)
+	}
+
+	// Ensure it's a regular file, not a directory or symlink
+	if !fileInfo.Mode().IsRegular() {
+		return fmt.Errorf("seeder path must be a regular file: %s", filePath)
 	}
 
 	log.Printf("Running seeder file: %s", filePath)
