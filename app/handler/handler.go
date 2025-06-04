@@ -9,7 +9,7 @@ type Handler struct {
 func NewHandler(container *container.Container) *Handler {
 	authHandler := NewAuthHandler(
 		container.AuthService,
-		container.MailService,
+		container.EmailService,
 	)
 
 	return &Handler{
