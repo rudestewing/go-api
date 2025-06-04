@@ -10,14 +10,14 @@ import (
 )
 
 type AuthHandler struct {
-	AuthService  *service.AuthService
-	EmailService *mail.EmailService
+	AuthService *service.AuthService
+	MailService *mail.MailService
 }
 
-func NewAuthHandler(authService *service.AuthService, emailService *mail.EmailService) *AuthHandler {
+func NewAuthHandler(authService *service.AuthService, mailService *mail.MailService) *AuthHandler {
 	return &AuthHandler{
-		AuthService:  authService,
-		EmailService: emailService,
+		AuthService: authService,
+		MailService: mailService,
 	}
 }
 
@@ -99,10 +99,9 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 			"message": err.Error(),
 		})
 	}
-
-	// Send welcome email in background (don't block the response)
+	// Send welcome mail in background (don't block the response)
 	go func() {
-		if err := h.EmailService.SendWelcomeEmail(req.Email, req.Name); err != nil {
+		if err := h.MailService.SendWelcomeMail(req.Email, req.Name); err != nil {
 			// Log the error but don't fail the registration
 			// You might want to use your logger here
 			// For now, we'll just continue silently

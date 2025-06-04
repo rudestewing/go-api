@@ -14,10 +14,10 @@ import (
 )
 
 type Container struct {
-	Config       *config.Config
-	DB           *gorm.DB
-	AuthService  *service.AuthService
-	EmailService *mail.EmailService
+	Config      *config.Config
+	DB          *gorm.DB
+	AuthService *service.AuthService
+	MailService *mail.MailService
 }
 
 func NewContainer() (*Container, error) {
@@ -32,16 +32,15 @@ func NewContainer() (*Container, error) {
 	userRepo := repository.NewUserRepository(db)
 	roleRepo := repository.NewRoleRepository(db)
 	accessTokenRepo := repository.NewAccessTokenRepository(db)
-
 	// Initialize services
 	authService := service.NewAuthService(userRepo, roleRepo, accessTokenRepo)
-	emailService := mail.NewMailClient(cfg)
+	mailService := mail.NewMailClient(cfg)
 
 	container := &Container{
-		Config:       cfg,
-		DB:           db,
-		AuthService:  authService,
-		EmailService: emailService,
+		Config:      cfg,
+		DB:          db,
+		AuthService: authService,
+		MailService: mailService,
 	}
 
 	return container, nil

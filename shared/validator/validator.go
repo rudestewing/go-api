@@ -22,7 +22,7 @@ func ValidateStruct(s any) error {
 			validationErrors = append(validationErrors, formatValidationError(err))
 		}
 
-		return fmt.Errorf(strings.Join(validationErrors, "; "))
+		return fmt.Errorf("%s", strings.Join(validationErrors, "; "))
 	}
 	return nil
 }
@@ -31,11 +31,10 @@ func ValidateStruct(s any) error {
 func formatValidationError(fe validator.FieldError) string {
 	field := strings.ToLower(fe.Field())
 
-	switch fe.Tag() {
-	case "required":
+	switch fe.Tag() {	case "required":
 		return fmt.Sprintf("%s is required", field)
 	case "email":
-		return fmt.Sprintf("%s must be a valid email address", field)
+		return fmt.Sprintf("%s must be a valid mail address", field)
 	case "min":
 		return fmt.Sprintf("%s must be at least %s characters long", field, fe.Param())
 	case "max":
@@ -69,9 +68,9 @@ func formatValidationError(fe validator.FieldError) string {
 	}
 }
 
-// IsValidEmail checks if the given string is a valid email address
-func IsValidEmail(email string) bool {
-	err := validate.Var(email, "required,email")
+// IsValidMail checks if the given string is a valid mail address
+func IsValidMail(mail string) bool {
+	err := validate.Var(mail, "required,email")
 	return err == nil
 }
 

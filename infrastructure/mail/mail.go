@@ -11,16 +11,16 @@ import (
 	"gopkg.in/gomail.v2"
 )
 
-type EmailService struct {
+type MailService struct {
 	config        *config.Config
 	templateCache map[string]*template.Template
 }
 
-// EmailData represents the data structure for email templates
-type EmailData map[string]any
+// MailData represents the data structure for mail templates
+type MailData map[string]any
 
-func NewMailClient(cfg *config.Config) *EmailService {
-	service := &EmailService{
+func NewMailClient(cfg *config.Config) *MailService {
+	service := &MailService{
 		config:        cfg,
 		templateCache: make(map[string]*template.Template),
 	}
@@ -31,12 +31,11 @@ func NewMailClient(cfg *config.Config) *EmailService {
 	return service
 }
 
-// loadTemplates loads all email templates into memory
-func (s *EmailService) loadTemplates() {
-	templateDir := "emails/templates"
-
+// loadTemplates loads all mail templates into memory
+func (s *MailService) loadTemplates() {
+	templateDir := "infrastructure/mail/templates"
 	// Define available templates
-	templates := []string{"welcome", "password_reset", "email_verification"}
+	templates := []string{"welcome", "password_reset", "mail_verification"}
 
 	for _, tmplName := range templates {
 		htmlPath := filepath.Join(templateDir, tmplName+".html")
@@ -53,13 +52,12 @@ func (s *EmailService) loadTemplates() {
 	}
 }
 
-
-// SendEmail sends a generic email (base method)
-func (s *EmailService) SendEmail(to, subject, htmlBody, textBody string) error {
+// SendMail sends a generic mail (base method)
+func (s *MailService) SendMail(to, subject, htmlBody, textBody string) error {
 	m := gomail.NewMessage()
 
 	// Set headers
-	m.SetHeader("From", m.FormatAddress(s.config.FromEmail, s.config.FromName))
+	m.SetHeader("From", m.FormatAddress(s.config.FromMail, s.config.FromName))
 	m.SetHeader("To", to)
 	m.SetHeader("Subject", subject)
 
@@ -71,19 +69,18 @@ func (s *EmailService) SendEmail(to, subject, htmlBody, textBody string) error {
 	}
 
 	// Create dialer
-	d := gomail.NewDialer(s.config.SMTPHost, s.config.SMTPPort, s.config.EmailUsername, s.config.EmailPassword)
+	d := gomail.NewDialer(s.config.SMTPHost, s.config.SMTPPort, s.config.MailUsername, s.config.MailPassword)
 
-	// Send email
+	// Send mail
 	if err := d.DialAndSend(m); err != nil {
-		return fmt.Errorf("failed to send email: %w", err)
+		return fmt.Errorf("failed to send mail: %w", err)
 	}
 
 	return nil
 }
 
-
-// SendTemplateEmail sends an email using a specified template with dynamic data
-func (s *EmailService) SendTemplateEmail(to, subject, templateName string, data EmailData) error {
+// SendTemplateMail sends a mail using a specified template with dynamic data
+func (s *MailService) SendTemplateMail(to, subject, templateName string, data MailData) error {
 	// Set default values
 	if data["Year"] == 0 {
 		data["Year"] = time.Now().Year()
@@ -91,8 +88,8 @@ func (s *EmailService) SendTemplateEmail(to, subject, templateName string, data 
 	if data["AppName"] == "" {
 		data["AppName"] = "Go API App"
 	}
-	if data["SupportEmail"] == "" {
-		data["SupportEmail"] = s.config.FromEmail
+	if data["SupportMail"] == "" {
+		data["SupportMail"] = s.config.FromMail
 	}
 
 	// Get HTML template
@@ -112,41 +109,40 @@ func (s *EmailService) SendTemplateEmail(to, subject, templateName string, data 
 	}
 	htmlBody = htmlBuf.String()
 
-	// Send email with only HTML body
-	return s.SendEmail(to, subject, htmlBody, "")
+	// Send mail with only HTML body
+	return s.SendMail(to, subject, htmlBody, "")
 }
 
-
-// SendWelcomeEmail sends a welcome email using the welcome template
-func (s *EmailService) SendWelcomeEmail(userEmail, userName string) error {
-	data := EmailData{
+// SendWelcomeMail sends a welcome mail using the welcome template
+func (s *MailService) SendWelcomeMail(userMail, userName string) error {
+	data := MailData{
 		"UserName": userName,
 		"LoginURL": "", // Add your login URL here if needed
 	}
 
-	return s.SendTemplateEmail(userEmail, "Welcome to Go API App!", "welcome", data)
+	return s.SendTemplateMail(userMail, "Welcome to Go API App!", "welcome", data)
 }
 
-// SendPasswordResetEmail sends a password reset email using the password_reset template
-func (s *EmailService) SendPasswordResetEmail(userEmail, userName, resetToken string, expirationMinutes int) error {
-	data := EmailData{
-		"UserName":   userName,
-		"ResetToken": resetToken,
-		"ResetURL":   "", // Add your reset URL here if needed
+// SendPasswordResetMail sends a password reset mail using the password_reset template
+func (s *MailService) SendPasswordResetMail(userMail, userName, resetToken string, expirationMinutes int) error {
+	data := MailData{
+		"UserName":       userName,
+		"ResetToken":     resetToken,
+		"ResetURL":       "", // Add your reset URL here if needed
 		"ExpirationTime": expirationMinutes,
 	}
 
-	return s.SendTemplateEmail(userEmail, "Password Reset Request", "password_reset", data)
+	return s.SendTemplateMail(userMail, "Password Reset Request", "password_reset", data)
 }
 
-// SendEmailVerificationEmail sends an email verification using the email_verification template
-func (s *EmailService) SendEmailVerificationEmail(userEmail, userName, verificationCode string, expirationMinutes int) error {
-	data := EmailData{
+// SendMailVerificationMail sends a mail verification using the mail_verification template
+func (s *MailService) SendMailVerificationMail(userMail, userName, verificationCode string, expirationMinutes int) error {
+	data := MailData{
 		"UserName":         userName,
 		"VerificationCode": verificationCode,
 		"VerificationURL":  "", // Add your verification URL here if needed
 		"ExpirationTime":   expirationMinutes,
 	}
 
-	return s.SendTemplateEmail(userEmail, "Please Verify Your Email", "email_verification", data)
+	return s.SendTemplateMail(userMail, "Please Verify Your Mail", "mail_verification", data)
 }
