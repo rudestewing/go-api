@@ -22,10 +22,9 @@ func ErrorHandlingMiddleware() fiber.Handler {
 			buf := make([]byte, 1024)
 			n := runtime.Stack(buf, false)
 			stackTrace := string(buf[:n])
-
-			// Log the error with context
-			logger.LogError("Request failed | IP: %s | Method: %s | Path: %s | Error: %s | Duration: %v | Stack: %s",
-				c.IP(), c.Method(), c.Path(), err.Error(), time.Since(start), stackTrace)
+		// Log the error with context
+		logger.Errorf("Request failed | IP: %s | Method: %s | Path: %s | Error: %s | Duration: %v | Stack: %s",
+			c.IP(), c.Method(), c.Path(), err.Error(), time.Since(start), stackTrace)
 
 			// Determine status code
 			code := fiber.StatusInternalServerError
@@ -100,9 +99,8 @@ func ErrorHandlingMiddleware() fiber.Handler {
 
 			return c.Status(code).JSON(response)
 		}
-
 		// Log successful requests
-		logger.LogInfo("Request completed | IP: %s | Method: %s | Path: %s | Status: %d | Duration: %v",
+		logger.Infof("Request completed | IP: %s | Method: %s | Path: %s | Status: %d | Duration: %v",
 			c.IP(), c.Method(), c.Path(), c.Response().StatusCode(), time.Since(start))
 
 		return nil

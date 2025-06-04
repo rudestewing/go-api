@@ -34,10 +34,9 @@ func createFiberApp() *fiber.App {
 			if e, ok := err.(*fiber.Error); ok {
 				code = e.Code
 			}
-
-			// Log error to file
-			logger.LogError("Fiber error: %s | Path: %s | Method: %s | IP: %s",
-				err.Error(), c.Path(), c.Method(), c.IP())
+		// Log error to file
+		logger.Errorf("Fiber error: %s | Path: %s | Method: %s | IP: %s",
+			err.Error(), c.Path(), c.Method(), c.IP())
 
 			return c.Status(code).JSON(fiber.Map{
 				"error": err.Error(),
@@ -79,11 +78,10 @@ func createFiberApp() *fiber.App {
 			"version":   "1.0.0",
 		})
 	})
-
 	// Setup logger configuration from config
 	loggerConfig := logger.LoggerConfig{
 		LogDir:      cfg.LogDir,
-		MaxSize:     cfg.LogMaxSize,
+		MaxSize:     int(cfg.LogMaxSize), // Convert int64 to int
 		MaxAge:      cfg.LogMaxAge,
 		EnableDaily: cfg.EnableDailyLog,
 	}
@@ -117,10 +115,10 @@ func main() {
 
 	// Clean up old logs on startup
 	if err := logger.CleanupOldLogs(); err != nil {
-		logger.LogWarning("Failed to cleanup old logs: %v", err)
+		logger.Warnf("Failed to cleanup old logs: %v", err)
 	}
 
-	logger.LogInfo("Starting application in %s environment...", cfg.Environment)
+	logger.Infof("Starting application in %s environment...", cfg.Environment)
 
 	// Initialize Fiber App
 	app := createFiberApp()
@@ -129,7 +127,7 @@ func main() {
 	container, err_container := container.NewContainer()
 
 	if err_container != nil {
-		logger.LogFatal("Failed to create container: %v", err_container)
+		logger.Fatalf("Failed to create container: %v", err_container)
 	}
 
 	handler := handler.NewHandler(container)
@@ -137,7 +135,7 @@ func main() {
 	router.RegisterRoutes(app, handler, container)
 
 	port := ":" + cfg.AppPort
-	logger.LogInfo("🚀 Server starting on port %s...", cfg.AppPort)
+	logger.Infof("🚀 Server starting on port %s...", cfg.AppPort)
 
 	// Create a channel to listen for interrupt signals
 	c := make(chan os.Signal, 1)
@@ -147,22 +145,22 @@ func main() {
 	serverErr := make(chan error, 1)
 	go func() {
 		if err := app.Listen(port); err != nil {
-			logger.LogError("Server failed to start: %v", err)
+			logger.Errorf("Server failed to start: %v", err)
 			serverErr <- err
 		}
 	}()
 
-	logger.LogInfo("Server started successfully. Press Ctrl+C to shutdown gracefully...")
+	logger.Infof("Server started successfully. Press Ctrl+C to shutdown gracefully...")
 
 	// Block until we receive an interrupt signal or server error
 	select {
 	case <-c:
-		logger.LogInfo("Received interrupt signal")
+		logger.Infof("Received interrupt signal")
 	case err := <-serverErr:
-		logger.LogError("Server error: %v", err)
+		logger.Errorf("Server error: %v", err)
 	}
 
-	logger.LogInfo("Shutting down server gracefully...")
+	logger.Infof("Shutting down server gracefully...")
 
 	// Create a deadline for the shutdown using config with fallback
 	shutdownTimeout := cfg.ShutdownTimeout
@@ -175,13 +173,12 @@ func main() {
 
 	// Shutdown the Fiber server
 	if err := app.ShutdownWithContext(ctx); err != nil {
-		logger.LogError("Server forced to shutdown: %v", err)
+		logger.Errorf("Server forced to shutdown: %v", err)
 	}
-
 	// Close container (database connections, etc.)
 	if err := container.Close(ctx); err != nil {
-		logger.LogError("Error closing container: %v", err)
+		logger.Errorf("Error closing container: %v", err)
 	}
 
-	logger.LogInfo("Server exited successfully")
+	logger.Infof("Server exited successfully")
 }
