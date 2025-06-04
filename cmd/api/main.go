@@ -76,19 +76,10 @@ func createFiberApp() *fiber.App {
 			"status":    "ok",
 			"timestamp": time.Now().Unix(),
 			"version":   "1.0.0",
-		})
-	})
-	// Setup logger configuration from config
-	loggerConfig := logger.LoggerConfig{
-		LogDir:      cfg.LogDir,
-		MaxSize:     int(cfg.LogMaxSize), // Convert int64 to int
-		MaxAge:      cfg.LogMaxAge,
-		EnableDaily: cfg.EnableDailyLog,
-	}
-
+		})	})
 	// Use custom Fiber logger with file output - hanya jika enabled
 	if cfg.EnableFiberLog {
-		fiberLoggerConfig := logger.GetFiberLoggerConfig(loggerConfig)
+		fiberLoggerConfig := logger.GetFiberConfig()
 		app.Use(fiberLogger.New(fiberLoggerConfig))
 	}
 
@@ -108,8 +99,7 @@ func main() {
 	config.InitConfig()
 
 	cfg := config.Get()
-
-	if err := logger.InitLogger(); err != nil {
+	if err := logger.Init(); err != nil {
 		log.Fatalf("Failed to initialize logger: %v", err)
 	}
 
