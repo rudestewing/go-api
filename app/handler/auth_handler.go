@@ -3,7 +3,7 @@ package handler
 import (
 	"go-api/app/dto"
 	"go-api/app/service"
-	"go-api/infrastructure/mail"
+	"go-api/infrastructure/email"
 	"go-api/shared/validator"
 
 	"github.com/gofiber/fiber/v2"
@@ -11,10 +11,10 @@ import (
 
 type AuthHandler struct {
 	AuthService  *service.AuthService
-	EmailService *mail.EmailService
+	EmailService *email.EmailService
 }
 
-func NewAuthHandler(authService *service.AuthService, emailService *mail.EmailService) *AuthHandler {
+func NewAuthHandler(authService *service.AuthService, emailService *email.EmailService) *AuthHandler {
 	return &AuthHandler{
 		AuthService:  authService,
 		EmailService: emailService,

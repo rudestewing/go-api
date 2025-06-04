@@ -1,4 +1,4 @@
-package mail
+package email
 
 import (
 	"bytes"
@@ -33,7 +33,7 @@ func NewMailClient(cfg *config.Config) *EmailService {
 
 // loadTemplates loads all email templates into memory
 func (s *EmailService) loadTemplates() {
-	templateDir := "emails/templates"
+	templateDir := "infrastructure/emails/templates"
 
 	// Define available templates
 	templates := []string{"welcome", "password_reset", "email_verification"}
