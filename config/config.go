@@ -16,16 +16,16 @@ type Config struct {
 	JWTExpiry   time.Duration
 	Environment string
 	// Timezone configuration
-	Timezone   string
+	Timezone    string
 	TimezoneLoc *time.Location
 	// CORS configurations
 	AllowedOrigins string
 	AllowedMethods string
 	AllowedHeaders string
 	// Rate limiting configurations
-	RateLimitMax        int
-	RateLimitWindow     time.Duration
-	RateLimitEnabled    bool
+	RateLimitMax     int
+	RateLimitWindow  time.Duration
+	RateLimitEnabled bool
 	// Security configurations
 	SecurityHeadersEnabled bool
 	TrustedProxies         string
@@ -146,10 +146,10 @@ func buildConfig() {
 		DatabaseURL: viper.GetString("database.url"),
 
 		// Security from config.yaml
-		JWTSecret: viper.GetString("security.jwt_secret"),
-		JWTExpiry: viper.GetDuration("security.jwt_expiry"),
+		JWTSecret:              viper.GetString("security.jwt_secret"),
+		JWTExpiry:              viper.GetDuration("security.jwt_expiry"),
 		SecurityHeadersEnabled: viper.GetBool("security.headers_enabled"),
-		TrustedProxies: viper.GetString("security.trusted_proxies"),
+		TrustedProxies:         viper.GetString("security.trusted_proxies"),
 
 		// App configurations
 		AppPort:         viper.GetString("app.port"),
@@ -214,9 +214,9 @@ func validateConfig() {
 	for key, value := range requiredConfigs {
 		// Check if values are empty or still contain default placeholder values
 		if value == "" ||
-		   value == "postgres://username:password@localhost:5432/database_name" ||
-		   value == "your-super-secret-jwt-key-here" ||
-		   value == "your-super-secret-jwt-key-here-minimum-32-characters" {
+			value == "postgres://username:password@localhost:5432/database_name" ||
+			value == "your-super-secret-jwt-key-here" ||
+			value == "your-super-secret-jwt-key-here-minimum-32-characters" {
 			missingConfigs = append(missingConfigs, key)
 		}
 	}

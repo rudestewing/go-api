@@ -53,7 +53,6 @@ func (s *EmailService) loadTemplates() {
 	}
 }
 
-
 // SendEmail sends a generic email (base method)
 func (s *EmailService) SendEmail(to, subject, htmlBody, textBody string) error {
 	m := gomail.NewMessage()
@@ -80,7 +79,6 @@ func (s *EmailService) SendEmail(to, subject, htmlBody, textBody string) error {
 
 	return nil
 }
-
 
 // SendTemplateEmail sends an email using a specified template with dynamic data
 func (s *EmailService) SendTemplateEmail(to, subject, templateName string, data EmailData) error {
@@ -116,7 +114,6 @@ func (s *EmailService) SendTemplateEmail(to, subject, templateName string, data 
 	return s.SendEmail(to, subject, htmlBody, "")
 }
 
-
 // SendWelcomeEmail sends a welcome email using the welcome template
 func (s *EmailService) SendWelcomeEmail(userEmail, userName string) error {
 	data := EmailData{
@@ -130,9 +127,9 @@ func (s *EmailService) SendWelcomeEmail(userEmail, userName string) error {
 // SendPasswordResetEmail sends a password reset email using the password_reset template
 func (s *EmailService) SendPasswordResetEmail(userEmail, userName, resetToken string, expirationMinutes int) error {
 	data := EmailData{
-		"UserName":   userName,
-		"ResetToken": resetToken,
-		"ResetURL":   "", // Add your reset URL here if needed
+		"UserName":       userName,
+		"ResetToken":     resetToken,
+		"ResetURL":       "", // Add your reset URL here if needed
 		"ExpirationTime": expirationMinutes,
 	}
 

@@ -96,8 +96,8 @@ func (h *HealthHandler) checkDatabase() fiber.Map {
 	sqlDB, err := h.db.DB()
 	if err != nil {
 		return fiber.Map{
-			"status":       "unhealthy",
-			"error":        "Failed to get database instance",
+			"status":        "unhealthy",
+			"error":         "Failed to get database instance",
 			"response_time": time.Since(start).String(),
 		}
 	}
@@ -105,8 +105,8 @@ func (h *HealthHandler) checkDatabase() fiber.Map {
 	// Test database connectivity
 	if err := sqlDB.Ping(); err != nil {
 		return fiber.Map{
-			"status":       "unhealthy",
-			"error":        "Database ping failed",
+			"status":        "unhealthy",
+			"error":         "Database ping failed",
 			"response_time": time.Since(start).String(),
 		}
 	}
@@ -115,8 +115,8 @@ func (h *HealthHandler) checkDatabase() fiber.Map {
 	var result int
 	if err := h.db.Raw("SELECT 1").Scan(&result).Error; err != nil {
 		return fiber.Map{
-			"status":       "unhealthy",
-			"error":        "Database query failed",
+			"status":        "unhealthy",
+			"error":         "Database query failed",
 			"response_time": time.Since(start).String(),
 		}
 	}
@@ -128,10 +128,10 @@ func (h *HealthHandler) checkDatabase() fiber.Map {
 		"status":        "healthy",
 		"response_time": time.Since(start).String(),
 		"connections": fiber.Map{
-			"open":        stats.OpenConnections,
-			"in_use":      stats.InUse,
-			"idle":        stats.Idle,
-			"max_open":    stats.MaxOpenConnections,
+			"open":     stats.OpenConnections,
+			"in_use":   stats.InUse,
+			"idle":     stats.Idle,
+			"max_open": stats.MaxOpenConnections,
 		},
 	}
 }

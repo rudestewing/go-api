@@ -46,7 +46,7 @@ func AuthRateLimitMiddleware() fiber.Handler {
 
 	// More restrictive rate limiting for auth endpoints
 	return limiter.New(limiter.Config{
-		Max:        5, // 5 login attempts
+		Max:        5,                // 5 login attempts
 		Expiration: 15 * time.Minute, // per 15 minutes
 		KeyGenerator: func(c *fiber.Ctx) string {
 			// Rate limit by IP for login attempts

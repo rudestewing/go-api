@@ -97,8 +97,8 @@ func ContentTypeValidationMiddleware() fiber.Handler {
 
 		// Check if content type is appropriate
 		if !strings.HasPrefix(contentType, "application/json") &&
-		   !strings.HasPrefix(contentType, "multipart/form-data") &&
-		   !strings.HasPrefix(contentType, "application/x-www-form-urlencoded") {
+			!strings.HasPrefix(contentType, "multipart/form-data") &&
+			!strings.HasPrefix(contentType, "application/x-www-form-urlencoded") {
 			return c.Status(fiber.StatusUnsupportedMediaType).JSON(fiber.Map{
 				"error":   "Unsupported media type",
 				"message": "Content-Type must be application/json, multipart/form-data, or application/x-www-form-urlencoded",

@@ -40,9 +40,9 @@ func DatabaseHealthMiddleware() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		// Skip health check for health endpoints to avoid circular dependency
 		if c.Path() == "/health" ||
-		   c.Path() == "/health/live" ||
-		   c.Path() == "/health/ready" ||
-		   c.Path() == "/health/detailed" {
+			c.Path() == "/health/live" ||
+			c.Path() == "/health/ready" ||
+			c.Path() == "/health/detailed" {
 			return c.Next()
 		}
 

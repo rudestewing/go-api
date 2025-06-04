@@ -34,9 +34,9 @@ func createFiberApp() *fiber.App {
 			if e, ok := err.(*fiber.Error); ok {
 				code = e.Code
 			}
-		// Log error to file
-		logger.Errorf("Fiber error: %s | Path: %s | Method: %s | IP: %s",
-			err.Error(), c.Path(), c.Method(), c.IP())
+			// Log error to file
+			logger.Errorf("Fiber error: %s | Path: %s | Method: %s | IP: %s",
+				err.Error(), c.Path(), c.Method(), c.IP())
 
 			return c.Status(code).JSON(fiber.Map{
 				"error": err.Error(),
@@ -76,7 +76,8 @@ func createFiberApp() *fiber.App {
 			"status":    "ok",
 			"timestamp": time.Now().Unix(),
 			"version":   "1.0.0",
-		})	})
+		})
+	})
 	// Use custom Fiber logger with file output - hanya jika enabled
 	if cfg.EnableFiberLog {
 		fiberLoggerConfig := logger.GetFiberConfig()
