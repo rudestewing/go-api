@@ -35,7 +35,7 @@ func NewContainer() (*Container, error) {
 
 	// Initialize services
 	authService := service.NewAuthService(userRepo, roleRepo, accessTokenRepo)
-	emailService := email.NewMailClient(cfg)
+	emailService := email.NewEmailClient(cfg)
 
 	container := &Container{
 		Config:       cfg,

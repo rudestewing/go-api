@@ -19,7 +19,7 @@ type EmailService struct {
 // EmailData represents the data structure for email templates
 type EmailData map[string]any
 
-func NewMailClient(cfg *config.Config) *EmailService {
+func NewEmailClient(cfg *config.Config) *EmailService {
 	service := &EmailService{
 		config:        cfg,
 		templateCache: make(map[string]*template.Template),
