@@ -3,8 +3,8 @@ package container
 import (
 	"context"
 	"fmt"
+	authService "go-api/app/domain/auth/service"
 	"go-api/app/repository"
-	"go-api/app/service"
 	"go-api/config"
 	"go-api/database"
 	"go-api/infrastructure/email"
@@ -16,7 +16,7 @@ import (
 type Container struct {
 	Config       *config.Config
 	DB           *gorm.DB
-	AuthService  *service.AuthService
+	AuthService  *authService.AuthService
 	EmailService *email.EmailService
 }
 
@@ -34,7 +34,7 @@ func NewContainer() (*Container, error) {
 	accessTokenRepo := repository.NewAccessTokenRepository(db)
 
 	// Initialize services
-	authService := service.NewAuthService(userRepo, roleRepo, accessTokenRepo)
+	authService := authService.NewAuthService(userRepo, roleRepo, accessTokenRepo)
 	emailService := email.NewEmailClient(cfg)
 
 	container := &Container{

@@ -39,21 +39,17 @@ type Config struct {
 	IdleTimeout     time.Duration
 	ShutdownTimeout time.Duration
 	// Logging configurations
-	LogDir         string
-	LogMaxSize     int64
-	LogMaxAge      int
-	EnableDailyLog bool
 	// Debug/Development logging
-	EnableGormLog  bool
-	EnableFiberLog bool
-	LogLevel       string
-	// Email configurations
-	SMTPHost      string
-	SMTPPort      int
-	EmailUsername string
-	EmailPassword string
-	FromName      string
-	FromEmail     string
+	EnableDatabaseLog bool
+	EnableAppLog      bool
+	LogLevel          string
+	// Mail configurations
+	SMTPHost    string
+	SMTPPort    int
+	MailUsername string
+	MailPassword string
+	FromName     string
+	FromEmail    string
 }
 
 var GlobalConfig *Config
@@ -123,21 +119,17 @@ func setDefaults() {
 	viper.SetDefault("rate_limit.window", time.Minute)
 
 	// Logging defaults
-	viper.SetDefault("logging.dir", "storage/logs")
-	viper.SetDefault("logging.max_size", 10*1024*1024) // 10MB
-	viper.SetDefault("logging.max_age", 30)            // 30 days
-	viper.SetDefault("logging.enable_daily", true)
-	viper.SetDefault("logging.enable_gorm_log", false)  // Default off untuk production
-	viper.SetDefault("logging.enable_fiber_log", false) // Default off untuk production
-	viper.SetDefault("logging.level", "info")           // info, debug, warn, error
+	viper.SetDefault("logging.enable_database_log", false) // Default off for production
+	viper.SetDefault("logging.enable_app_log", false)      // Default off for production
+	viper.SetDefault("logging.level", "info")              // info, debug, warn, error
 
-	// Email defaults
-	viper.SetDefault("email.smtp_host", "smtp.gmail.com")
-	viper.SetDefault("email.smtp_port", 587)
-	viper.SetDefault("email.username", "")
-	viper.SetDefault("email.password", "")
-	viper.SetDefault("email.from_name", "Go API App")
-	viper.SetDefault("email.from_email", "")
+	// Mail configuration defaults
+	viper.SetDefault("mail.smtp_host", "smtp.gmail.com")
+	viper.SetDefault("mail.smtp_port", 587)
+	viper.SetDefault("mail.username", "")
+	viper.SetDefault("mail.password", "")
+	viper.SetDefault("mail.from_name", "Go API App")
+	viper.SetDefault("mail.from_email", "")
 }
 
 func buildConfig() {
@@ -176,21 +168,17 @@ func buildConfig() {
 		DBMaxLifetime:  viper.GetDuration("database.max_lifetime"),
 
 		// Logging configurations
-		LogDir:         viper.GetString("logging.dir"),
-		LogMaxSize:     viper.GetInt64("logging.max_size"),
-		LogMaxAge:      viper.GetInt("logging.max_age"),
-		EnableDailyLog: viper.GetBool("logging.enable_daily"),
-		EnableGormLog:  viper.GetBool("logging.enable_gorm_log"),
-		EnableFiberLog: viper.GetBool("logging.enable_fiber_log"),
-		LogLevel:       viper.GetString("logging.level"),
+		EnableDatabaseLog: viper.GetBool("logging.enable_database_log"),
+		EnableAppLog:      viper.GetBool("logging.enable_app_log"),
+		LogLevel:          viper.GetString("logging.level"),
 
-		// Email configurations
-		SMTPHost:      viper.GetString("email.smtp_host"),
-		SMTPPort:      viper.GetInt("email.smtp_port"),
-		EmailUsername: viper.GetString("email.username"),
-		EmailPassword: viper.GetString("email.password"),
-		FromName:      viper.GetString("email.from_name"),
-		FromEmail:     viper.GetString("email.from_email"),
+		// Mail configurations
+		SMTPHost:     viper.GetString("mail.smtp_host"),
+		SMTPPort:     viper.GetInt("mail.smtp_port"),
+		MailUsername: viper.GetString("mail.username"),
+		MailPassword: viper.GetString("mail.password"),
+		FromName:     viper.GetString("mail.from_name"),
+		FromEmail:    viper.GetString("mail.from_email"),
 	}
 
 	// Load timezone location

@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"go-api/app/handler"
 	"go-api/config"
 	"go-api/container"
 	"go-api/middleware"
@@ -28,7 +27,7 @@ func createFiberApp() *fiber.App {
 		ReadTimeout:           cfg.ReadTimeout,
 		WriteTimeout:          cfg.WriteTimeout,
 		IdleTimeout:           cfg.IdleTimeout,
-		DisableStartupMessage: !cfg.EnableFiberLog, // Disable startup message jika fiber log disabled
+		DisableStartupMessage: !cfg.EnableAppLog, // Disable startup message if app log disabled
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
 			code := fiber.StatusInternalServerError
 			if e, ok := err.(*fiber.Error); ok {
@@ -78,10 +77,10 @@ func createFiberApp() *fiber.App {
 			"version":   "1.0.0",
 		})
 	})
-	// Use custom Fiber logger with file output - hanya jika enabled
-	if cfg.EnableFiberLog {
-		fiberLoggerConfig := logger.GetFiberConfig()
-		app.Use(fiberLogger.New(fiberLoggerConfig))
+	// Use custom application logger with file output - only if enabled
+	if cfg.EnableAppLog {
+		appLoggerConfig := logger.GetAppLoggerConfig()
+		app.Use(fiberLogger.New(appLoggerConfig))
 	}
 
 	// CORS with production-safe configuration
@@ -104,11 +103,6 @@ func main() {
 		log.Fatalf("Failed to initialize logger: %v", err)
 	}
 
-	// Clean up old logs on startup
-	if err := logger.CleanupOldLogs(); err != nil {
-		logger.Warnf("Failed to cleanup old logs: %v", err)
-	}
-
 	logger.Infof("Starting application in %s environment...", cfg.Environment)
 
 	// Initialize Fiber App
@@ -121,9 +115,8 @@ func main() {
 		logger.Fatalf("Failed to create container: %v", err_container)
 	}
 
-	handler := handler.NewHandler(container)
 	// Setup Routes
-	router.RegisterRoutes(app, handler, container)
+	router.RegisterRoutes(app, container)
 
 	port := ":" + cfg.AppPort
 	logger.Infof("🚀 Server starting on port %s...", cfg.AppPort)

@@ -33,7 +33,7 @@ func NewEmailClient(cfg *config.Config) *EmailService {
 
 // loadTemplates loads all email templates into memory
 func (s *EmailService) loadTemplates() {
-	templateDir := "infrastructure/emails/templates"
+	templateDir := "infrastructure/email/templates"
 
 	// Define available templates
 	templates := []string{"welcome", "password_reset", "email_verification"}
@@ -70,7 +70,7 @@ func (s *EmailService) SendEmail(to, subject, htmlBody, textBody string) error {
 	}
 
 	// Create dialer
-	d := gomail.NewDialer(s.config.SMTPHost, s.config.SMTPPort, s.config.EmailUsername, s.config.EmailPassword)
+	d := gomail.NewDialer(s.config.SMTPHost, s.config.SMTPPort, s.config.MailUsername, s.config.MailPassword)
 
 	// Send email
 	if err := d.DialAndSend(m); err != nil {

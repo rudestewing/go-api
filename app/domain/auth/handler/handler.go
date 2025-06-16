@@ -1,8 +1,8 @@
 package handler
 
 import (
-	"go-api/app/dto"
-	"go-api/app/service"
+	"go-api/app/domain/auth/dto"
+	"go-api/app/domain/auth/service"
 	"go-api/infrastructure/email"
 	"go-api/shared/validator"
 

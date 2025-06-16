@@ -29,3 +29,19 @@ func (r *RoleRepository) FindByCode(ctx context.Context, code string) (*model.Ro
 
 	return &role, nil
 }
+
+// FindByID retrieves a role by ID
+func (r *RoleRepository) FindByID(ctx context.Context, id uint) (*model.Role, error) {
+	var role model.Role
+	err := r.db.WithContext(ctx).Where("id = ?", id).First(&role).Error
+
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, errors.New("role not found")
+		}
+		return nil, err
+	}
+
+	return &role, nil
+}
+

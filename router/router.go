@@ -1,7 +1,8 @@
 package router
 
 import (
-	"go-api/app/handler"
+	auth "go-api/app/domain/auth/handler"
+	healthcheck "go-api/app/domain/healthcheck/handler"
 	"go-api/container"
 	"go-api/middleware"
 	"time"
@@ -9,11 +10,9 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func RegisterRoutes(app *fiber.App, h *handler.Handler, container *container.Container) {
-	// Create health handler directly from package
-	healthHandler := handler.NewHealthHandler(container.DB)
-
-	// Health check endpoints (no rate limiting for monitoring)
+func RegisterRoutes(app *fiber.App, c *container.Container) {
+	// HEALTH CHECKS
+	healthHandler := healthcheck.NewHealthHandler(c.DB)
 	app.Get("/health", healthHandler.HealthCheck)
 	app.Get("/health/detailed", healthHandler.DetailedHealthCheck)
 	app.Get("/health/ready", healthHandler.ReadinessCheck)
@@ -28,13 +27,13 @@ func RegisterRoutes(app *fiber.App, h *handler.Handler, container *container.Con
 		})
 	})
 
-	// Auth routes with specific rate limiting
+	// AUTHENTICATION ROUTES
+	authHandler := auth.NewAuthHandler(c.AuthService, c.EmailService)
 	auth := router.Group("/auth")
-	auth.Use(middleware.AuthRateLimitMiddleware()) // More restrictive rate limiting for auth
-	auth.Post("/login", h.AuthHandler.Login)
-	auth.Post("/register", h.AuthHandler.Register)
+	auth.Use(middleware.AuthRateLimitMiddleware()) // More restrictive rate limiting for auth	auth.Post("/login", authHandler.Login)
+	auth.Post("/register", authHandler.Register)
 
-	protectedAuth := auth.Use(middleware.AuthMiddleware(container.AuthService))
-	protectedAuth.Post("/logout", h.AuthHandler.Logout)
-	protectedAuth.Post("/logout-all", h.AuthHandler.LogoutAll)
+	protectedAuth := auth.Use(middleware.AuthMiddleware(c.AuthService))
+	protectedAuth.Post("/logout", authHandler.Logout)
+	protectedAuth.Post("/logout-all", authHandler.LogoutAll)
 }

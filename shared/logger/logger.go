@@ -41,21 +41,21 @@ const (
 func Init() error {
 	cfg := config.Get()
 
-	// Create log directory if it doesn't exist
-	if err := os.MkdirAll(cfg.LogDir, 0755); err != nil {
+	// Create log directory if it doesn't exist (hardcoded to storage/logs)
+	logDir := "storage/logs"
+	if err := os.MkdirAll(logDir, 0755); err != nil {
 		return fmt.Errorf("failed to create log directory: %w", err)
 	}
 
-	// Setup log file with rotation
-	logFileName := getLogFileName(cfg.EnableDailyLog)
-	logPath := filepath.Join(cfg.LogDir, logFileName)
+	// Setup log file with rotation (single file only)
+	logPath := filepath.Join(logDir, "app.log")
 
 	lumberjackLogger := &lumberjack.Logger{
 		Filename:   logPath,
-		MaxSize:    defaultMaxSize,
-		MaxAge:     cfg.LogMaxAge,
+		MaxSize:    defaultMaxSize, // Use hardcoded 10MB default
 		MaxBackups: defaultMaxBackups,
 		Compress:   true,
+		// MaxAge removed - files will never be deleted based on age
 	}
 
 	// Create cores for console and file output
@@ -125,28 +125,16 @@ func parseLogLevel(level string) zapcore.Level {
 	}
 }
 
-// getLogFileName returns the log file name based on daily logging setting
-func getLogFileName(enableDaily bool) string {
-	if enableDaily {
-		return fmt.Sprintf("app-%s.log", time.Now().Format("2006-01-02"))
-	}
-	return "app.log"
-}
-
-// GetFiberConfig returns Fiber logger middleware configuration
-func GetFiberConfig() logger.Config {
+// GetAppLoggerConfig returns application logger middleware configuration
+func GetAppLoggerConfig() logger.Config {
 	cfg := config.Get()
 
 	var output io.Writer = os.Stdout
 
 	// Setup file output if enabled
-	if cfg.EnableFiberLog {
-		logFileName := "fiber-access.log"
-		if cfg.EnableDailyLog {
-			logFileName = fmt.Sprintf("fiber-access-%s.log", time.Now().Format("2006-01-02"))
-		}
-
-		logPath := filepath.Join(cfg.LogDir, logFileName)
+	if cfg.EnableAppLog {
+		logDir := "storage/logs"
+		logPath := filepath.Join(logDir, "app-access.log")
 		if logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666); err == nil {
 			output = io.MultiWriter(os.Stdout, logFile)
 		}
@@ -154,15 +142,15 @@ func GetFiberConfig() logger.Config {
 
 	return logger.Config{
 		Output:     output,
-		Format:     getFiberLogFormat(cfg.LogLevel),
+		Format:     getAppLogFormat(cfg.LogLevel),
 		TimeFormat: "2006-01-02 15:04:05",
 		TimeZone:   "Local",
-		Next:       getFiberLogFilter(cfg.LogLevel),
+		Next:       getAppLogFilter(cfg.LogLevel),
 	}
 }
 
-// getFiberLogFormat returns log format based on log level
-func getFiberLogFormat(logLevel string) string {
+// getAppLogFormat returns log format based on log level
+func getAppLogFormat(logLevel string) string {
 	formats := map[string]string{
 		"debug": "${time} [${level}] | ${status} | ${latency} | ${ip} | ${method} | ${path} | ${query} | ${ua} | ${error}\n",
 		"info":  "${time} [INFO] | ${status} | ${latency} | ${ip} | ${method} | ${path} | ${error}\n",
@@ -176,8 +164,8 @@ func getFiberLogFormat(logLevel string) string {
 	return formats["info"] // default
 }
 
-// getFiberLogFilter returns filter function based on log level
-func getFiberLogFilter(logLevel string) func(*fiber.Ctx) bool {
+// getAppLogFilter returns filter function based on log level
+func getAppLogFilter(logLevel string) func(*fiber.Ctx) bool {
 	staticExtensions := []string{".css", ".js", ".ico", ".png", ".jpg", ".svg"}
 
 	switch logLevel {
@@ -204,7 +192,7 @@ func getFiberLogFilter(logLevel string) func(*fiber.Ctx) bool {
 			return c.Response().StatusCode() < 500 // Only log 5xx
 		}
 	default:
-		return getFiberLogFilter("info")
+		return getAppLogFilter("info")
 	}
 }
 
@@ -213,28 +201,6 @@ func Sync() {
 	if Logger != nil {
 		Logger.Sync()
 	}
-}
-
-// CleanupOldLogs removes log files older than maxAge days
-func CleanupOldLogs() error {
-	cfg := config.Get()
-
-	if !cfg.EnableDailyLog {
-		return nil
-	}
-
-	return filepath.Walk(cfg.LogDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil || info.IsDir() {
-			return err
-		}
-
-		if time.Since(info.ModTime()).Hours() > float64(cfg.LogMaxAge*24) {
-			Sugar.Infof("Removing old log file: %s", path)
-			return os.Remove(path)
-		}
-
-		return nil
-	})
 }
 
 // Logging functions with zap fields

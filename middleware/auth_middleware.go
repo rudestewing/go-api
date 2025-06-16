@@ -1,13 +1,13 @@
 package middleware
 
 import (
-	"go-api/app/service"
+	authService "go-api/app/domain/auth/service"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
 )
 
-func AuthMiddleware(authService *service.AuthService) fiber.Handler {
+func AuthMiddleware(service *authService.AuthService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		authHeader := c.Get("Authorization")
 		if authHeader == "" {
@@ -26,7 +26,7 @@ func AuthMiddleware(authService *service.AuthService) fiber.Handler {
 		ctx := c.UserContext()
 
 		// Validate token using auth service with context
-		accessToken, err := authService.ValidateToken(ctx, token)
+		accessToken, err := service.ValidateToken(ctx, token)
 		if err != nil {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 				"error": "Invalid or expired token",
