@@ -51,7 +51,7 @@ func NewMigrationManager() (*MigrationManager, error) {
 	}
 
 	// Create migrations directory if it doesn't exist
-	if err := os.MkdirAll(migrationsPath, 0755); err != nil {
+	if err := os.MkdirAll(migrationsPath, 0750); err != nil {
 		return nil, fmt.Errorf("failed to create migrations directory: %w", err)
 	}
 
@@ -304,7 +304,7 @@ func CreateMigration(name string) error {
 
 	// Create migrations directory if it doesn't exist
 	migrationsDir := "database/migrations"
-	if err := os.MkdirAll(migrationsDir, 0755); err != nil {
+	if err := os.MkdirAll(migrationsDir, 0750); err != nil {
 		return fmt.Errorf("failed to create migrations directory: %w", err)
 	}
 
@@ -339,12 +339,12 @@ func CreateMigration(name string) error {
 `
 
 	// Write UP migration file
-	if err := os.WriteFile(upFilepath, []byte(upTemplate), 0644); err != nil {
+	if err := os.WriteFile(upFilepath, []byte(upTemplate), 0600); err != nil {
 		return fmt.Errorf("failed to create UP migration file: %w", err)
 	}
 
 	// Write DOWN migration file
-	if err := os.WriteFile(downFilepath, []byte(downTemplate), 0644); err != nil {
+	if err := os.WriteFile(downFilepath, []byte(downTemplate), 0600); err != nil {
 		return fmt.Errorf("failed to create DOWN migration file: %w", err)
 	}
 

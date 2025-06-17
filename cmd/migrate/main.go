@@ -143,7 +143,11 @@ func forceVersion(version int) {
 func dropDatabase() {
 	fmt.Print("⚠️  This will drop all tables in the database. Are you sure? (y/N): ")
 	var response string
-	fmt.Scanln(&response)
+	_, err := fmt.Scanln(&response)
+	if err != nil {
+		fmt.Printf("Error reading input: %v\n", err)
+		return
+	}
 
 	if response != "y" && response != "Y" && response != "yes" && response != "YES" {
 		fmt.Println("Operation cancelled")
@@ -164,7 +168,11 @@ func dropDatabase() {
 func runFreshMigrations() {
 	fmt.Print("⚠️  This will drop all tables and re-run all migrations from the beginning. Are you sure? (y/N): ")
 	var response string
-	fmt.Scanln(&response)
+	_, err := fmt.Scanln(&response)
+	if err != nil {
+		fmt.Printf("Error reading input: %v\n", err)
+		return
+	}
 
 	if response != "y" && response != "Y" && response != "yes" && response != "YES" {
 		fmt.Println("Operation cancelled")
@@ -185,7 +193,11 @@ func runFreshMigrations() {
 func purgeMigrations() {
 	fmt.Print("⚠️  This will rollback all executed migrations to version 0. Are you sure? (y/N): ")
 	var response string
-	fmt.Scanln(&response)
+	_, err := fmt.Scanln(&response)
+	if err != nil {
+		fmt.Printf("Error reading input: %v\n", err)
+		return
+	}
 
 	if response != "y" && response != "Y" && response != "yes" && response != "YES" {
 		fmt.Println("Operation cancelled")

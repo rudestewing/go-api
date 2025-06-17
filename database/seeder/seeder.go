@@ -74,7 +74,7 @@ func CreateSeeder(name string) error {
 
 	// Create seeders directory if it doesn't exist
 	seedersDir := "database/seeders"
-	if err := os.MkdirAll(seedersDir, 0755); err != nil {
+	if err := os.MkdirAll(seedersDir, 0750); err != nil {
 		return fmt.Errorf("failed to create seeders directory: %w", err)
 	}
 
@@ -144,7 +144,7 @@ func run%s(db *gorm.DB) error {
 		titleName, cleanName)
 
 	// Write seeder file
-	if err := os.WriteFile(filepath, []byte(template), 0644); err != nil {
+	if err := os.WriteFile(filepath, []byte(template), 0600); err != nil {
 		return fmt.Errorf("failed to create seeder file: %w", err)
 	}
 

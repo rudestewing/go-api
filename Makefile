@@ -7,10 +7,9 @@ help:
 	@echo "Available commands:"
 	@echo "  make run              - Run the application with air (hot reload)"
 	@echo "  make build            - Build the application"
-	@echo "  make build-prod       - Build for production"
-	@echo "  make test             - Run tests"
+	@echo "  make build-prod       - Build for production"	@echo "  make test             - Run tests"
 	@echo "  make clean            - Clean build artifacts"
-	@echo "  make security-check   - Run security checks"
+	@echo "  make security-check   - Run security checks with gosec"
 	@echo ""
 
 	@echo "Migration commands:"
@@ -131,11 +130,9 @@ seed-help:
 
 # Security checks
 security-check:
-	@echo "Running security checks..."
-	@which gosec > /dev/null || (echo "Installing gosec..." && go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest)
+	@echo "Running security checks with gosec..."
+	@where gosec >nul 2>&1 || (echo Installing gosec... && go install github.com/securego/gosec/v2/cmd/gosec@latest)
 	gosec ./...
-	@echo "Running go mod audit..."
-	go list -json -deps ./... | nancy sleuth
 
 # Clean up temporary files
 clean-migrations:

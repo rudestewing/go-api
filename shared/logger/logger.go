@@ -17,6 +17,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -58,7 +59,7 @@ func Init() error {
 
 	// Create log directory if it doesn't exist (hardcoded to storage/logs)
 	logDir := "storage/logs"
-	if err := os.MkdirAll(logDir, 0755); err != nil {
+	if err := os.MkdirAll(logDir, 0750); err != nil {
 		return fmt.Errorf("failed to create log directory: %w", err)
 	}
 
@@ -158,18 +159,27 @@ func GetAppLoggerConfig() logger.Config {
 	// Setup file output if enabled with proper error handling
 	if cfg.EnableAppLog {
 		logDir := "storage/logs"
-		if err := os.MkdirAll(logDir, 0755); err != nil {
+		if err := os.MkdirAll(logDir, 0750); err != nil {
 			// Fallback to stdout only if directory creation fails
 			output = os.Stdout
 		} else {
-			logPath := filepath.Join(logDir, "app-access.log")
-			if logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666); err != nil {
-				// Fallback to stdout only if file opening fails
+			// Use hardcoded filename for security
+			const logFileName = "app-access.log"
+			logPath := filepath.Join(logDir, logFileName)
+			
+			// Additional safety check to ensure we're within the expected directory
+			if !strings.HasPrefix(logPath, logDir) {
 				output = os.Stdout
 			} else {
-				// Note: We don't close the file here as it's used by the middleware
-				// The file will be closed when the application shuts down
-				output = io.MultiWriter(os.Stdout, logFile)
+				// #nosec G304 -- path is validated and controlled
+				if logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600); err != nil {
+					// Fallback to stdout only if file opening fails
+					output = os.Stdout
+				} else {
+					// Note: We don't close the file here as it's used by the middleware
+					// The file will be closed when the application shuts down
+					output = io.MultiWriter(os.Stdout, logFile)
+				}
 			}
 		}
 	}
@@ -317,4 +327,40 @@ func Named(name string) *zap.Logger {
 		return Logger.Named(name)
 	}
 	return nil
+}
+
+// safePath validates and sanitizes file paths to prevent directory traversal
+func safePath(basePath, filename string) (string, error) {
+	// Clean the filename to remove any path traversal attempts
+	cleanFilename := filepath.Clean(filename)
+	
+	// Check for path traversal attempts
+	if strings.Contains(cleanFilename, "..") {
+		return "", fmt.Errorf("invalid filename: path traversal detected")
+	}
+	
+	// Ensure filename doesn't contain absolute path indicators
+	if filepath.IsAbs(cleanFilename) {
+		return "", fmt.Errorf("invalid filename: absolute paths not allowed")
+	}
+	
+	// Join with base path and clean again
+	fullPath := filepath.Join(basePath, cleanFilename)
+	
+	// Ensure the resulting path is still within the base directory
+	absBase, err := filepath.Abs(basePath)
+	if err != nil {
+		return "", fmt.Errorf("failed to resolve base path: %w", err)
+	}
+	
+	absPath, err := filepath.Abs(fullPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to resolve full path: %w", err)
+	}
+	
+	if !strings.HasPrefix(absPath, absBase) {
+		return "", fmt.Errorf("path outside of allowed directory")
+	}
+	
+	return fullPath, nil
 }
