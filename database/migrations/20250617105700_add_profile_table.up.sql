@@ -1,0 +1,7 @@
+-- Write your UP migration here
+-- Example:
+-- CREATE TABLE example (
+--     id SERIAL PRIMARY KEY,
+--     name VARCHAR(255) NOT NULL,
+--     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+-- );

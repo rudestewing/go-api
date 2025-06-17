@@ -7,6 +7,7 @@ require (
 	github.com/gofiber/fiber/v2 v2.52.8
 	github.com/golang-migrate/migrate/v4 v4.18.3
 	github.com/lib/pq v1.10.9
+	github.com/spf13/cobra v1.9.1
 	github.com/spf13/viper v1.20.1
 	go.uber.org/zap v1.27.0
 	golang.org/x/crypto v0.38.0
@@ -26,6 +27,7 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
+	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
 	github.com/jackc/pgx/v5 v5.6.0 // indirect

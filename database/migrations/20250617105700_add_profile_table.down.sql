@@ -1,0 +1,3 @@
+-- Write your DOWN migration here
+-- Example:
+-- DROP TABLE IF EXISTS example;

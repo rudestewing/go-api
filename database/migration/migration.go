@@ -55,9 +55,12 @@ func NewMigrationManager() (*MigrationManager, error) {
 		return nil, fmt.Errorf("failed to create migrations directory: %w", err)
 	}
 
+	// Convert Windows path to Unix-style path for file URL
+	migrationsURL := "file://" + filepath.ToSlash(migrationsPath)
+
 	// Create migrate instance
 	m, err := migrate.NewWithDatabaseInstance(
-		fmt.Sprintf("file://%s", migrationsPath),
+		migrationsURL,
 		"postgres",
 		driver,
 	)
