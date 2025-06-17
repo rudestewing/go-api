@@ -1,9 +1,9 @@
 package main
 
 import (
-	"go-api/app/model"
 	"go-api/config"
 	"go-api/database"
+	"go-api/model"
 	"go-api/shared/constant"
 	"log"
 

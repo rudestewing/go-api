@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
-	"go-api/app/model"
+	"go-api/model"
 
 	"gorm.io/gorm"
 )

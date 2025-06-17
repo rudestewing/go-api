@@ -1,6 +1,11 @@
 # Configuration files (contains sensitive data)
 config.yaml
 
+# Environment files - NEVER COMMIT
+.env
+.env.*
+*.env
+
 # Build directories and binaries
 tmp/
 dist/
@@ -51,5 +56,20 @@ node_modules/
 
 # Air live reload
 .air.toml.local
+
+# Logs and sensitive data
+storage/logs/*.log
+logs/
+*.log
+
+# Test files
+*.test
+*.out
+coverage.html
+testdata/
+.testcoverage.txt
+
+# Vendor
+vendor/
 
 api

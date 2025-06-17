@@ -1,9 +1,9 @@
 package router
 
 import (
-	auth "go-api/app/domain/auth/handler"
-	healthcheck "go-api/app/domain/healthcheck/handler"
 	"go-api/container"
+	auth "go-api/domain/auth/handler"
+	healthcheck "go-api/domain/healthcheck/handler"
 	"go-api/middleware"
 	"time"
 

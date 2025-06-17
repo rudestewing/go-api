@@ -2,9 +2,9 @@ package main
 
 import (
 	"crypto/rand"
-	"go-api/app/model"
 	"go-api/config"
 	"go-api/database"
+	"go-api/model"
 	"log"
 	"math/big"
 

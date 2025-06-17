@@ -32,6 +32,21 @@ var (
 	Sugar  *zap.SugaredLogger
 )
 
+// Sync flushes any buffered log entries
+func Sync() {
+	if Logger != nil {
+		_ = Logger.Sync()
+	}
+}
+
+// Close gracefully closes the logger
+func Close() error {
+	if Logger != nil {
+		return Logger.Sync()
+	}
+	return nil
+}
+
 const (
 	defaultMaxSize    = 10 // 10MB
 	defaultMaxBackups = 5
@@ -71,7 +86,16 @@ func Init() error {
 		zap.AddStacktrace(zapcore.ErrorLevel),
 		zap.AddCallerSkip(1),
 	)
+	
+	if Logger == nil {
+		return fmt.Errorf("failed to initialize zap logger")
+	}
+	
 	Sugar = Logger.Sugar()
+	
+	if Sugar == nil {
+		return fmt.Errorf("failed to initialize zap sugar logger")
+	}
 
 	return nil
 }
@@ -131,12 +155,22 @@ func GetAppLoggerConfig() logger.Config {
 
 	var output io.Writer = os.Stdout
 
-	// Setup file output if enabled
+	// Setup file output if enabled with proper error handling
 	if cfg.EnableAppLog {
 		logDir := "storage/logs"
-		logPath := filepath.Join(logDir, "app-access.log")
-		if logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666); err == nil {
-			output = io.MultiWriter(os.Stdout, logFile)
+		if err := os.MkdirAll(logDir, 0755); err != nil {
+			// Fallback to stdout only if directory creation fails
+			output = os.Stdout
+		} else {
+			logPath := filepath.Join(logDir, "app-access.log")
+			if logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666); err != nil {
+				// Fallback to stdout only if file opening fails
+				output = os.Stdout
+			} else {
+				// Note: We don't close the file here as it's used by the middleware
+				// The file will be closed when the application shuts down
+				output = io.MultiWriter(os.Stdout, logFile)
+			}
 		}
 	}
 
@@ -193,13 +227,6 @@ func getAppLogFilter(logLevel string) func(*fiber.Ctx) bool {
 		}
 	default:
 		return getAppLogFilter("info")
-	}
-}
-
-// Sync flushes any buffered log entries
-func Sync() {
-	if Logger != nil {
-		Logger.Sync()
 	}
 }
 

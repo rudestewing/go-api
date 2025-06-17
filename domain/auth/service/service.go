@@ -3,10 +3,10 @@ package service
 import (
 	"context"
 	"errors"
-	"go-api/app/domain/auth/dto"
-	"go-api/app/model"
-	"go-api/app/repository"
 	"go-api/config"
+	dto "go-api/domain/auth/entity"
+	"go-api/model"
+	"go-api/repository"
 	"go-api/shared/constant"
 	"time"
 

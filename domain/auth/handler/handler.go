@@ -1,9 +1,9 @@
 package handler
 
 import (
-	"go-api/app/domain/auth/dto"
-	"go-api/app/domain/auth/service"
-	"go-api/infrastructure/email"
+	"go-api/domain/auth/entity"
+	"go-api/domain/auth/service"
+	"go-api/email"
 	"go-api/shared/validator"
 
 	"github.com/gofiber/fiber/v2"
@@ -22,7 +22,7 @@ func NewAuthHandler(authService *service.AuthService, emailService *email.EmailS
 }
 
 func (h *AuthHandler) Login(c *fiber.Ctx) error {
-	var req dto.LoginRequest
+	var req entity.LoginRequest
 
 	// Parse JSON body
 	if err := c.BodyParser(&req); err != nil {
@@ -63,7 +63,7 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 }
 
 func (h *AuthHandler) Register(c *fiber.Ctx) error {
-	var req dto.RegisterRequest
+	var req entity.RegisterRequest
 
 	// Parse JSON body
 	if err := c.BodyParser(&req); err != nil {

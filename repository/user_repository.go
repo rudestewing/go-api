@@ -2,7 +2,7 @@ package repository
 
 import (
 	"context"
-	"go-api/app/model"
+	"go-api/model"
 
 	"gorm.io/gorm"
 )

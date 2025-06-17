@@ -93,15 +93,16 @@ func setDefaults() {
 	viper.SetDefault("database.max_open_conns", 100)
 	viper.SetDefault("database.max_lifetime", time.Hour)
 
-	// Security defaults
-	viper.SetDefault("security.jwt_secret", "your-super-secret-jwt-key-here")
+	// Security defaults - NO HARDCODED SECRETS
+	// These MUST be set in config.yaml or environment variables
+	viper.SetDefault("security.jwt_secret", "")
 	viper.SetDefault("security.jwt_expiry", 24*time.Hour)
 	viper.SetDefault("security.headers_enabled", true)
 	viper.SetDefault("security.trusted_proxies", "")
 
-	// App defaults
+	// App defaults - Secure defaults for production
 	viper.SetDefault("app.port", "8000")
-	viper.SetDefault("app.environment", "development")
+	viper.SetDefault("app.environment", "production") // Default to production for security
 	viper.SetDefault("app.timezone", "Asia/Jakarta")
 	viper.SetDefault("app.read_timeout", 30*time.Second)
 	viper.SetDefault("app.write_timeout", 30*time.Second)
@@ -118,10 +119,10 @@ func setDefaults() {
 	viper.SetDefault("rate_limit.max", 100)
 	viper.SetDefault("rate_limit.window", time.Minute)
 
-	// Logging defaults
+	// Logging defaults - Secure defaults
 	viper.SetDefault("logging.enable_database_log", false) // Default off for production
 	viper.SetDefault("logging.enable_app_log", false)      // Default off for production
-	viper.SetDefault("logging.level", "info")              // info, debug, warn, error
+	viper.SetDefault("logging.level", "info")              // info level default
 
 	// Mail configuration defaults
 	viper.SetDefault("mail.smtp_host", "smtp.gmail.com")
@@ -202,15 +203,14 @@ func validateConfig() {
 	for key, value := range requiredConfigs {
 		// Check if values are empty or still contain default placeholder values
 		if value == "" ||
-			value == "postgres://username:password@localhost:5432/database_name" ||
-			value == "your-super-secret-jwt-key-here" ||
-			value == "your-super-secret-jwt-key-here-minimum-32-characters" {
+			value == "postgres://username:password@localhost:5432/database_name" {
 			missingConfigs = append(missingConfigs, key)
 		}
 	}
 
 	if len(missingConfigs) > 0 {
-		log.Fatalf("Required configurations need to be updated in config.yaml: %v", missingConfigs)
+		log.Fatalf("Required configurations must be set in config.yaml: %v\n"+
+			"These cannot be empty or use default values for security reasons.", missingConfigs)
 	}
 
 	// Additional security validations

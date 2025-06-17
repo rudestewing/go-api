@@ -1,9 +1,11 @@
 package database
 
 import (
+	"context"
 	"fmt"
 	"go-api/config"
 	"log"
+	"time"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -43,36 +45,50 @@ func InitDB() (*gorm.DB, error) {
 	cfg := config.Get()
 
 	if cfg.DatabaseURL == "" {
-		return nil, fmt.Errorf("DATABASE_URL environment variable is required")
+		return nil, fmt.Errorf("DATABASE_URL configuration is required")
 	}
 
 	// Configure database logger based on config
 	databaseLogger := getDatabaseLogger()
 
+	// Add connection timeout and retry logic
 	db, err := gorm.Open(postgres.Open(cfg.DatabaseURL), &gorm.Config{
 		Logger: databaseLogger,
+		NowFunc: func() time.Time {
+			return time.Now().UTC()
+		},
+		PrepareStmt: true, // Enable prepared statements for better performance
 	})
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
 
-	// Configure connection pool to prevent memory leaks
+	// Configure connection pool to prevent memory leaks and optimize performance
 	sqlDB, err := db.DB()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get underlying sql.DB: %w", err)
 	}
 
-	// Set connection pool settings from config
-	sqlDB.SetMaxIdleConns(cfg.DBMaxIdleConns)
-	sqlDB.SetMaxOpenConns(cfg.DBMaxOpenConns)
-	sqlDB.SetConnMaxLifetime(cfg.DBMaxLifetime)
+	// Set connection pool settings from config with validation
+	if cfg.DBMaxIdleConns > 0 {
+		sqlDB.SetMaxIdleConns(cfg.DBMaxIdleConns)
+	}
+	if cfg.DBMaxOpenConns > 0 {
+		sqlDB.SetMaxOpenConns(cfg.DBMaxOpenConns)
+	}
+	if cfg.DBMaxLifetime > 0 {
+		sqlDB.SetConnMaxLifetime(cfg.DBMaxLifetime)
+	}
 
-	// Auto migrate the user model
-	// if err := db.AutoMigrate(&model.User{}); err != nil {
-	// 	return nil, fmt.Errorf("failed to migrate database: %w", err)
-	// }
+	// Test the connection
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	
+	if err := sqlDB.PingContext(ctx); err != nil {
+		return nil, fmt.Errorf("failed to ping database: %w", err)
+	}
 
-	log.Println("Database connection established")
+	log.Println("Database connection established successfully")
 	return db, nil
 }

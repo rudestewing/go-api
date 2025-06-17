@@ -1,4 +1,4 @@
-package dto
+package entity
 
 // LoginRequest represents the login request payload
 type LoginRequest struct {

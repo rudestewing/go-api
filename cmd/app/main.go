@@ -44,10 +44,20 @@ func createFiberApp() *fiber.App {
 	})
 
 	// Middleware order is important!
-	app.Use(recover.New())
+	app.Use(recover.New(recover.Config{
+		EnableStackTrace: cfg.Environment == "development",
+	}))
 
 	// Request ID for tracing
 	app.Use(middleware.RequestIDMiddleware())
+
+	// Security middleware
+	app.Use(middleware.SecurityHeadersMiddleware())
+	app.Use(middleware.InputSanitizationMiddleware())
+	app.Use(middleware.RequestValidationMiddleware())
+
+	// Timeout middleware
+	app.Use(middleware.TimeoutMiddleware(cfg.ReadTimeout, "Request timeout"))
 
 	// Error handling (should be early in the chain)
 	app.Use(middleware.ErrorHandlingMiddleware())
@@ -59,24 +69,41 @@ func createFiberApp() *fiber.App {
 	app.Use(middleware.ContentTypeValidationMiddleware())
 	app.Use(middleware.InputValidationMiddleware())
 
-	// Security Headers (helmet)
+	// Security Headers (helmet) - additional security
 	if cfg.SecurityHeadersEnabled {
-		app.Use(helmet.New())
+		app.Use(helmet.New(helmet.Config{
+			XSSProtection:         "1; mode=block",
+			ContentTypeNosniff:    "nosniff",
+			XFrameOptions:         "DENY",
+			ReferrerPolicy:        "no-referrer",
+			CrossOriginEmbedderPolicy: "require-corp",
+		}))
 	}
 
 	// Rate Limiting (general)
 	if cfg.RateLimitEnabled {
-		app.Use(middleware.RateLimitMiddleware())
+		app.Use(middleware.AdvancedRateLimitMiddleware())
 	}
 
-	// Health check endpoint
+	// Health check endpoints (before logging middleware for better performance)
 	app.Get("/health", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{
 			"status":    "ok",
-			"timestamp": time.Now().Unix(),
+			"timestamp": time.Now().UTC(),
+			"version":   "1.0.0",
+			"service":   "go-api",
+		})
+	})
+	
+	app.Get("/ready", func(c *fiber.Ctx) error {
+		// Quick readiness check without database
+		return c.JSON(fiber.Map{
+			"status":    "ready",
+			"timestamp": time.Now().UTC(),
 			"version":   "1.0.0",
 		})
 	})
+	
 	// Use custom application logger with file output - only if enabled
 	if cfg.EnableAppLog {
 		appLoggerConfig := logger.GetAppLoggerConfig()
@@ -99,9 +126,11 @@ func main() {
 	config.InitConfig()
 
 	cfg := config.Get()
+	// Initialize logger with proper error handling
 	if err := logger.Init(); err != nil {
 		log.Fatalf("Failed to initialize logger: %v", err)
 	}
+	defer logger.Sync() // Ensure logs are flushed on exit
 
 	logger.Infof("Starting application in %s environment...", cfg.Environment)
 
@@ -155,14 +184,22 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer cancel()
 
-	// Shutdown the Fiber server
+	// Shutdown the Fiber server gracefully
+	logger.Infof("Shutting down server...")
 	if err := app.ShutdownWithContext(ctx); err != nil {
 		logger.Errorf("Server forced to shutdown: %v", err)
+	} else {
+		logger.Infof("Server shutdown completed")
 	}
+	
 	// Close container (database connections, etc.)
 	if err := container.Close(ctx); err != nil {
 		logger.Errorf("Error closing container: %v", err)
+	} else {
+		logger.Infof("Container closed successfully")
 	}
 
-	logger.Infof("Server exited successfully")
+	// Final log sync
+	logger.Sync()
+	logger.Infof("Application exited successfully")
 }

@@ -32,13 +32,13 @@ help:
 
 # Application commands
 run:
-	go run cmd/api/main.go
+	go run cmd/app/main.go
 
 build:
-	go build -o tmp/main cmd/api/main.go
+	go build -o tmp/main cmd/app/main.go
 
 build-prod:
-	CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags="-s -w" -o tmp/main cmd/api/main.go
+	CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags="-s -w" -o tmp/main cmd/app/main.go
 
 # Testing commands
 test:

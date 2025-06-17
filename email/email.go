@@ -33,7 +33,7 @@ func NewEmailClient(cfg *config.Config) *EmailService {
 
 // loadTemplates loads all email templates into memory
 func (s *EmailService) loadTemplates() {
-	templateDir := "infrastructure/email/templates"
+	templateDir := "email/templates"
 
 	// Define available templates
 	templates := []string{"welcome", "password_reset", "email_verification"}

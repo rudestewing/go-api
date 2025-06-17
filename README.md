@@ -49,13 +49,20 @@ make test            # Run tests
 ## 📁 Project Structure
 
 ```
-app/          # Application layer (handlers, services, models)
-cmd/          # Entry points (api, migrate, seed)
-config/       # Configuration management
-database/     # Migrations and seeders
-middleware/   # HTTP middleware
-router/       # Route definitions
-shared/       # Utilities and helpers
+cmd/app/              # Main application entry point
+cmd/migrate/          # Database migration tool
+cmd/seed/             # Database seeding tool
+config/               # Configuration management
+database/             # Database connection and migrations
+infrastructure/       # External services (email, etc.)
+internal/             # Private application code
+├── domain/           # Business domain logic
+├── middleware/       # HTTP middleware
+├── model/            # Data models
+├── repository/       # Data access layer
+├── router/           # Route definitions
+└── shared/           # Utilities and helpers
+storage/              # File storage and logs
 ```
 
 Perfect for building REST APIs, microservices, or backend services with Go.

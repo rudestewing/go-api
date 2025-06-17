@@ -6,7 +6,7 @@ import (
 	"encoding/hex"
 	"time"
 
-	"go-api/app/model"
+	"go-api/model"
 	"go-api/shared/timezone"
 
 	"gorm.io/gorm"
