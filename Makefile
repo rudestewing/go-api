@@ -7,7 +7,8 @@ help:
 	@echo "Available commands:"
 	@echo "  make run              - Run the application with air (hot reload)"
 	@echo "  make build            - Build the application"
-	@echo "  make build-prod       - Build for production"	@echo "  make test             - Run tests"
+	@echo "  make build-prod       - Build for production"
+	@echo "  make test             - Run tests"
 	@echo "  make clean            - Clean build artifacts"
 	@echo "  make security-check   - Run security checks with gosec"
 	@echo ""
@@ -31,13 +32,13 @@ help:
 
 # Application commands
 run:
-	go run cmd/app/main.go
+	go run main.go serve
 
 build:
-	go build -o tmp/main cmd/app/main.go
+	go build -o tmp/main.exe main.go
 
 build-prod:
-	CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags="-s -w" -o tmp/main cmd/app/main.go
+	CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags="-s -w" -o tmp/main main.go
 
 # Testing commands
 test:
@@ -88,25 +89,25 @@ ifndef name
 	@echo "Usage: make migrate-create name=\"migration_name\""
 	@exit 1
 endif
-	go run cmd/migrate/main.go create "$(name)"
+	go run main.go migrate create "$(name)"
 
 migrate-up:
-	go run cmd/migrate/main.go migrate
+	go run main.go migrate up
 
 migrate-down:
-	go run cmd/migrate/main.go rollback
+	go run main.go migrate rollback
 
 migrate-fresh:
-	go run cmd/migrate/main.go fresh
+	go run main.go migrate fresh
 
 migrate-purge:
-	go run cmd/migrate/main.go purge
+	go run main.go migrate purge
 
 migrate-status:
-	go run cmd/migrate/main.go status
+	go run main.go migrate status
 
 migrate-help:
-	go run cmd/migrate/main.go help
+	go run main.go migrate help
 
 # Seeder commands
 seed-create:
@@ -115,7 +116,7 @@ ifndef name
 	@echo "Usage: make seed-create name=\"seeder_name\""
 	@exit 1
 endif
-	go run cmd/seed/main.go create "$(name)"
+	go run main.go seed create "$(name)"
 
 seed-run:
 ifndef path
@@ -123,10 +124,10 @@ ifndef path
 	@echo "Usage: make seed-run path=\"database/seeders/20250529000000_roles.go\""
 	@exit 1
 endif
-	go run cmd/seed/main.go run "$(path)"
+	go run main.go seed run "$(path)"
 
 seed-help:
-	go run cmd/seed/main.go help
+	go run main.go seed help
 
 # Security checks
 security-check:

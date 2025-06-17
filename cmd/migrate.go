@@ -24,9 +24,9 @@ This tool uses golang-migrate library standard for SQL migrations with
 separate .up.sql and .down.sql files.
 
 Examples:
-  go-api migrate up
-  go-api migrate create create_users_table
-  go-api migrate rollback`,
+  migrate up
+  migrate create create_users_table
+  migrate rollback`,
 }
 
 // migrateUpCmd represents the migrate up command
@@ -75,7 +75,7 @@ The migration name should follow these rules:
 - Cannot exceed 50 characters
 
 Example:
-  go-api migrate create create_users_table`,
+  migrate create create_users_table`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		name := args[0]
@@ -97,7 +97,7 @@ var migrateForceCmd = &cobra.Command{
 This is a dangerous operation that should only be used to fix migration state issues.
 
 Example:
-  go-api migrate force 3`,
+  migrate force 3`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		versionStr := args[0]

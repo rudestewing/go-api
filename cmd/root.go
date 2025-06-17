@@ -9,19 +9,20 @@ import (
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
-	Use:   "go-api",
-	Short: "A Go API boilerplate with Fiber framework",
-	Long: `A complete Go API boilerplate built with Fiber web framework.
+	Use:   "",
+	Short: "A Go API boilerplate with Fiber framework",	Long: `A complete Go API boilerplate built with Fiber web framework.
 
 This CLI provides commands for:
-- Starting the HTTP API server
-- Managing database migrations
-- Running database seeders
+- Starting the HTTP API server (serve)
+- Managing database migrations (migrate)
+- Running database seeders (seed)
+
+Examples:
+  serve                     # Start the server
+  migrate up                # Run migrations
+  seed create posts         # Create seeder
 
 Use the available subcommands to manage your API application.`,
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
-	//	Run: func(cmd *cobra.Command, args []string) { },
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.

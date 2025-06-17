@@ -32,6 +32,7 @@ func RegisterRoutes(app *fiber.App, c *container.Container) {
 	auth := router.Group("/auth")
 	auth.Use(middleware.AuthRateLimitMiddleware()) // More restrictive rate limiting for auth	auth.Post("/login", authHandler.Login)
 	auth.Post("/register", authHandler.Register)
+	auth.Post("/login", authHandler.Login)
 
 	protectedAuth := auth.Use(middleware.AuthMiddleware(c.AuthService))
 	protectedAuth.Post("/logout", authHandler.Logout)

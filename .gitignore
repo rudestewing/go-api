@@ -72,4 +72,4 @@ testdata/
 # Vendor
 vendor/
 
-api
+.air.toml

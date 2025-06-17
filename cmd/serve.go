@@ -1,4 +1,4 @@
-package main
+package cmd
 
 import (
 	"context"
@@ -18,7 +18,33 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/helmet"
 	fiberLogger "github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
+	"github.com/spf13/cobra"
 )
+
+// serveCmd represents the serve command
+var serveCmd = &cobra.Command{
+	Use:   "serve",
+	Short: "Start the HTTP API server",
+	Long: `Start the HTTP API server with Fiber framework.
+
+This command will:
+- Initialize configuration and logger
+- Start the Fiber web server
+- Setup middleware and routes
+- Handle graceful shutdown on interrupt signals
+
+Examples:
+  serve`,
+	Run: func(cmd *cobra.Command, args []string) {
+		startServer()
+	},
+}
+
+
+func init() {
+	RootCmd.AddCommand(serveCmd)
+}
+
 
 func createFiberApp() *fiber.App {
 	cfg := config.Get()
@@ -121,11 +147,12 @@ func createFiberApp() *fiber.App {
 	return app
 }
 
-func main() {
+func startServer() {
 	// Initialize config first
 	config.InitConfig()
 
 	cfg := config.Get()
+
 	// Initialize logger with proper error handling
 	if err := logger.Init(); err != nil {
 		log.Fatalf("Failed to initialize logger: %v", err)

@@ -18,8 +18,8 @@ var seedCmd = &cobra.Command{
 	Long: `Database seeder management tool for creating and running seeders.
 
 Examples:
-  go-api seed create users_seeder
-  go-api seed run database/seeders/20250529000000_roles.go`,
+  seed create users_seeder
+  seed run database/seeders/20250529000000_roles.go`,
 }
 
 // seedCreateCmd represents the seed create command
@@ -34,7 +34,7 @@ The seeder name should follow these rules:
 - Cannot exceed 50 characters
 
 Example:
-  go-api seed create users_seeder`,
+  seed create users_seeder`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		name := args[0]
@@ -61,7 +61,7 @@ The seeder file must be:
 - Be a valid Go file with proper seeder implementation
 
 Example:
-  go-api seed run database/seeders/20250529000000_roles.go`,
+  seed run database/seeders/20250529000000_roles.go`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		filePath := args[0]
