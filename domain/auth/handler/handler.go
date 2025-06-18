@@ -5,6 +5,7 @@ import (
 	"go-api/domain/auth/entity"
 	"go-api/domain/auth/service"
 	"go-api/email"
+	"go-api/shared/response"
 	"go-api/shared/validator"
 
 	"github.com/gofiber/fiber/v2"
@@ -24,81 +25,52 @@ func NewAuthHandler(p *app.Provider) *AuthHandler {
 
 func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	var req entity.LoginRequest
-
 	// Parse JSON body
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"data":    nil,
-			"message": "Invalid request body",
-		})
+		return response.BadRequest(c, err, "Invalid request body")
 	}
-
 	// Validate request
-	if err := validator.ValidateStruct(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"data":    nil,
-			"message": err.Error(),
-		})
+	if validationErrors := validator.ValidateStruct(&req); validationErrors != nil {
+		return response.ValidationError(c, validationErrors)
 	}
 
 	// Gunakan context dari Fiber yang sudah memiliki timeout dari middleware
 	ctx := c.UserContext()
-
 	// Call service with timeout context
 	accessToken, err := h.AuthService.Login(ctx, req.Email, req.Password)
 	if err != nil {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"data":    nil,
-			"message": err.Error(),
-		})
+		return response.Unauthorized(c, err.Error())
 	}
 
-	return c.JSON(fiber.Map{
-		"data": fiber.Map{
-			"access_token": accessToken.Token,
-			"expires_at":   accessToken.ExpiresAt,
-			"user":         accessToken.User,
-		},
-		"message": "success",
-	})
+	return response.Success(c, fiber.Map{
+		"access_token": accessToken.Token,
+		"expires_at":   accessToken.ExpiresAt,
+		"user":         accessToken.User,
+	}, "Login successful")
 }
 
 func (h *AuthHandler) Register(c *fiber.Ctx) error {
 	var req entity.RegisterRequest
-
 	// Parse JSON body
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"data":    nil,
-			"message": "Invalid request body",
-		})
+		return response.BadRequest(c, err, "Invalid request body")
 	}
 
 	// Validate request structure
-	if err := validator.ValidateStruct(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"data":    nil,
-			"message": err.Error(),
-		})
+	if validationErrors := validator.ValidateStruct(&req); validationErrors != nil {
+		return response.ValidationError(c, validationErrors)
 	}
 
 	// Additional password validation
-	if err := validator.ValidatePassword(req.Password); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"data":    nil,
-			"message": err.Error(),
-		})
+	if passwordErrors := validator.ValidatePasswordWithDetails(req.Password); passwordErrors != nil {
+		return response.ValidationError(c, passwordErrors)
 	}
 
 	// Gunakan context dari Fiber yang sudah memiliki timeout dari middleware
 	ctx := c.UserContext()
-
 	// Call service with context
 	if err := h.AuthService.Register(ctx, &req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"data":    nil,
-			"message": err.Error(),
-		})
+		return response.BadRequest(c, err, "Registration failed")
 	}
 
 	// Send welcome email in background (don't block the response)
@@ -111,20 +83,14 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 		}
 	}()
 
-	return c.JSON(fiber.Map{
-		"data":    nil,
-		"message": "User registered successfully",
-	})
+	return response.Success(c, nil, "User registered successfully")
 }
 
 func (h *AuthHandler) Logout(c *fiber.Ctx) error {
 	// Get token from Authorization header
 	authHeader := c.Get("Authorization")
 	if authHeader == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"data":    nil,
-			"message": "Authorization header required",
-		})
+		return response.Unauthorized(c, "Authorization header required")
 	}
 
 	// Extract token (assuming Bearer token format)
@@ -137,40 +103,25 @@ func (h *AuthHandler) Logout(c *fiber.Ctx) error {
 	ctx := c.UserContext()
 
 	if err := h.AuthService.Logout(ctx, token); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"data":    nil,
-			"message": "Failed to logout",
-		})
+		return response.InternalServerError(c, err, "Failed to logout")
 	}
 
-	return c.JSON(fiber.Map{
-		"data":    nil,
-		"message": "Logged out successfully",
-	})
+	return response.Success(c, nil, "Logged out successfully")
 }
 
 func (h *AuthHandler) LogoutAll(c *fiber.Ctx) error {
 	// Get user from context (set by auth middleware)
 	userID := c.Locals("user_id")
 	if userID == nil {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"data":    nil,
-			"message": "Unauthorized",
-		})
+		return response.Unauthorized(c, "Unauthorized")
 	}
 
 	// Use context from Fiber that already has timeout from middleware
 	ctx := c.UserContext()
 
 	if err := h.AuthService.LogoutAll(ctx, userID.(uint)); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"data":    nil,
-			"message": "Failed to logout from all devices",
-		})
+		return response.InternalServerError(c, err, "Failed to logout from all devices")
 	}
 
-	return c.JSON(fiber.Map{
-		"data":    nil,
-		"message": "Logged out from all devices successfully",
-	})
+	return response.Success(c, nil, "Logged out from all devices successfully")
 }

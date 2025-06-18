@@ -5,7 +5,7 @@ import (
 	"errors"
 	"go-api/app"
 	"go-api/config"
-	dto "go-api/domain/auth/entity"
+	entity "go-api/domain/auth/entity"
 	"go-api/model"
 	"go-api/repository"
 	"go-api/shared/constant"
@@ -73,7 +73,7 @@ func (s *AuthService) LogoutAll(ctx context.Context, userID uint) error {
 	return s.accessTokenRepo.RevokeAllUserTokens(ctx, userID)
 }
 
-func (s *AuthService) Register(ctx context.Context, req *dto.RegisterRequest) error {
+func (s *AuthService) Register(ctx context.Context, req *entity.RegisterRequest) error {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return err
