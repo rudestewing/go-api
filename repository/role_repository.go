@@ -13,7 +13,9 @@ type RoleRepository struct {
 }
 
 func NewRoleRepository(db *gorm.DB) *RoleRepository {
-	return &RoleRepository{db: db}
+	return &RoleRepository{
+		db: db,
+	}
 }
 
 func (r *RoleRepository) FindByCode(ctx context.Context, code string) (*model.Role, error) {

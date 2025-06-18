@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"database/sql"
+	"go-api/app"
 	"go-api/config"
 	"time"
 
@@ -16,8 +17,10 @@ type HealthHandler struct {
 }
 
 // NewHealthHandler creates a new health handler
-func NewHealthHandler(db *gorm.DB) *HealthHandler {
-	return &HealthHandler{db: db}
+func NewHealthHandler(p *app.Provider) *HealthHandler {
+	return &HealthHandler{
+		db: p.DB,
+	}
 }
 
 // HealthCheck provides basic health status

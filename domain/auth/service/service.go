@@ -3,28 +3,32 @@ package service
 import (
 	"context"
 	"errors"
+	"go-api/app"
 	"go-api/config"
 	dto "go-api/domain/auth/entity"
 	"go-api/model"
 	"go-api/repository"
 	"go-api/shared/constant"
+	"go-api/shared/logger"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
 )
 
 type AuthService struct {
+	provider 			*app.Provider
 	userRepo        *repository.UserRepository
 	roleRepo        *repository.RoleRepository
 	accessTokenRepo *repository.AccessTokenRepository
 	tokenExpiry     time.Duration
 }
 
-func NewAuthService(userRepo *repository.UserRepository, roleRepo *repository.RoleRepository, accessTokenRepo *repository.AccessTokenRepository) *AuthService {
+func NewAuthService(p *app.Provider) *AuthService {
 	return &AuthService{
-		userRepo:        userRepo,
-		roleRepo:        roleRepo,
-		accessTokenRepo: accessTokenRepo,
+		provider: 			 p,
+		userRepo:        repository.NewUserRepository(p.DB),
+		roleRepo:        repository.NewRoleRepository(p.DB),
+		accessTokenRepo: repository.NewAccessTokenRepository(p.DB),
 		tokenExpiry:     config.Get().JWTExpiry,
 	}
 }
@@ -87,6 +91,12 @@ func (s *AuthService) Register(ctx context.Context, req *dto.RegisterRequest) er
 		RoleID:   roleUser.ID,
 		Password: string(hashedPassword),
 	}
+
+	go func() {
+		if err := s.provider.Email.SendWelcomeEmail(user.Email, user.Name); err != nil {
+			logger.Errorf("Failed to send email: %v", err)
+		}
+	}()
 
 	return s.userRepo.Create(ctx, user)
 }

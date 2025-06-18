@@ -55,4 +55,4 @@ mail:
   username: "your-email@example.com"
   password: "your-app-password"
   from_name: "Go API App"
-  from_mail: "noreply@example.com"
+  from_email: "noreply@example.com"

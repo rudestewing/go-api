@@ -19,7 +19,8 @@ type EmailService struct {
 // EmailData represents the data structure for email templates
 type EmailData map[string]any
 
-func NewEmailClient(cfg *config.Config) *EmailService {
+// NewEmailService creates a new email service instance
+func NewEmailService(cfg *config.Config) *EmailService {
 	service := &EmailService{
 		config:        cfg,
 		templateCache: make(map[string]*template.Template),
@@ -115,7 +116,7 @@ func (s *EmailService) SendTemplateEmail(to, subject, templateName string, data 
 }
 
 // SendWelcomeEmail sends a welcome email using the welcome template
-func (s *EmailService) SendWelcomeEmail(userEmail, userName string) error {
+func (s *EmailService) SendWelcomeEmail(userEmail string, userName string) error {
 	data := EmailData{
 		"UserName": userName,
 		"LoginURL": "", // Add your login URL here if needed

@@ -140,8 +140,7 @@ func run%s(db *gorm.DB) error {
 	return nil
 }
 `,
-		titleName, cleanName, cleanName,
-		titleName, cleanName)
+		titleName, cleanName, cleanName, titleName, cleanName)
 
 	// Write seeder file
 	if err := os.WriteFile(filepath, []byte(template), 0600); err != nil {

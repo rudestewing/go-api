@@ -17,7 +17,9 @@ type AccessTokenRepository struct {
 }
 
 func NewAccessTokenRepository(db *gorm.DB) *AccessTokenRepository {
-	return &AccessTokenRepository{db: db}
+	return &AccessTokenRepository{
+		db: db,
+	}
 }
 
 // generateSecureToken generates a cryptographically secure random token

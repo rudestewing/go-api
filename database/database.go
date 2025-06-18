@@ -13,7 +13,7 @@ import (
 )
 
 // GetDatabaseLogger returns a configured database logger based on config settings
-func getDatabaseLogger() logger.Interface {
+func GetDatabaseLogger() logger.Interface {
 	cfg := config.Get()
 
 	if !cfg.EnableDatabaseLog {
@@ -39,17 +39,19 @@ func getDatabaseLogger() logger.Interface {
 	return logger.Default.LogMode(logLevel)
 }
 
+// NewConnection creates a new database connection
+func NewConnection(cfg *config.Config) (*gorm.DB, error) {
+	return initDatabaseConnection(cfg)
+}
 
-// InitDB initializes the database connection with GORM
-func InitDB() (*gorm.DB, error) {
-	cfg := config.Get()
-
+// initDatabaseConnection is the internal function that handles the actual database connection
+func initDatabaseConnection(cfg *config.Config) (*gorm.DB, error) {
 	if cfg.DatabaseURL == "" {
 		return nil, fmt.Errorf("DATABASE_URL configuration is required")
 	}
 
 	// Configure database logger based on config
-	databaseLogger := getDatabaseLogger()
+	databaseLogger := GetDatabaseLogger()
 
 	// Add connection timeout and retry logic
 	db, err := gorm.Open(postgres.Open(cfg.DatabaseURL), &gorm.Config{
@@ -91,4 +93,15 @@ func InitDB() (*gorm.DB, error) {
 
 	log.Println("Database connection established successfully")
 	return db, nil
+}
+
+// InitDB initializes a database connection using the global config
+// This function is used by seeders and other standalone utilities
+func InitDB() (*gorm.DB, error) {
+	cfg := config.Get()
+	if cfg == nil {
+		return nil, fmt.Errorf("configuration not initialized")
+	}
+	
+	return NewConnection(cfg)
 }

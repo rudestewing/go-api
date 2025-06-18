@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"go-api/app"
 	authService "go-api/domain/auth/service"
 	"go-api/shared/logger"
 	"strings"
@@ -8,7 +9,9 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func AuthMiddleware(service *authService.AuthService) fiber.Handler {
+func AuthMiddleware(app *app.Provider) fiber.Handler {
+	service := authService.NewAuthService(app)
+	
 	return func(c *fiber.Ctx) error {
 		authHeader := c.Get("Authorization")
 		if authHeader == "" {

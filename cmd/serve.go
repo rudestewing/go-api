@@ -2,8 +2,8 @@ package cmd
 
 import (
 	"context"
+	"go-api/app"
 	"go-api/config"
-	"go-api/container"
 	"go-api/middleware"
 	"go-api/router"
 	"go-api/shared/logger"
@@ -46,7 +46,7 @@ func init() {
 }
 
 
-func createFiberApp() *fiber.App {
+func createFiberApp(provider *app.Provider) *fiber.App {
 	cfg := config.Get()
 
 	app := fiber.New(fiber.Config{
@@ -111,13 +111,24 @@ func createFiberApp() *fiber.App {
 		app.Use(middleware.AdvancedRateLimitMiddleware())
 	}
 
-	// Health check endpoints (before logging middleware for better performance)
+	// Health check endpoints
 	app.Get("/health", func(c *fiber.Ctx) error {
+		// Check actual database status via AppService
+		dbStatus := "connected"
+		if provider.DB != nil {
+			if sqlDB, err := provider.DB.DB(); err != nil || sqlDB.Ping() != nil {
+				dbStatus = "disconnected"
+			}
+		} else {
+			dbStatus = "not_initialized"
+		}
+		
 		return c.JSON(fiber.Map{
 			"status":    "ok",
 			"timestamp": time.Now().UTC(),
 			"version":   "1.0.0",
 			"service":   "go-api",
+			"database":  dbStatus,
 		})
 	})
 	
@@ -157,22 +168,24 @@ func startServer() {
 	if err := logger.Init(); err != nil {
 		log.Fatalf("Failed to initialize logger: %v", err)
 	}
+	
 	defer logger.Sync() // Ensure logs are flushed on exit
-
+	
 	logger.Infof("Starting application in %s environment...", cfg.Environment)
+	// Initialize global database first
+	logger.Infof("Initializing application services...")
+	provider, err := app.BootProvider(cfg)
+	if err != nil {
+		logger.Fatalf("Failed to initialize application services: %v", err)
+	}
+	logger.Infof("✅ Application services initialized successfully")
 
 	// Initialize Fiber App
-	app := createFiberApp()
+	fiberApp := createFiberApp(provider)
 
-	// Initialize App Container
-	container, err_container := container.NewContainer()
-
-	if err_container != nil {
-		logger.Fatalf("Failed to create container: %v", err_container)
-	}
-
+	
 	// Setup Routes
-	router.RegisterRoutes(app, container)
+	router.RegisterRoutes(fiberApp, provider)
 
 	port := ":" + cfg.AppPort
 	logger.Infof("🚀 Server starting on port %s...", cfg.AppPort)
@@ -184,7 +197,7 @@ func startServer() {
 	// Start server in a goroutine with error handling
 	serverErr := make(chan error, 1)
 	go func() {
-		if err := app.Listen(port); err != nil {
+		if err := fiberApp.Listen(port); err != nil {
 			logger.Errorf("Server failed to start: %v", err)
 			serverErr <- err
 		}
@@ -213,18 +226,15 @@ func startServer() {
 
 	// Shutdown the Fiber server gracefully
 	logger.Infof("Shutting down server...")
-	if err := app.ShutdownWithContext(ctx); err != nil {
+	
+	if err := fiberApp.ShutdownWithContext(ctx); err != nil {
 		logger.Errorf("Server forced to shutdown: %v", err)
 	} else {
 		logger.Infof("Server shutdown completed")
 	}
-	
-	// Close container (database connections, etc.)
-	if err := container.Close(ctx); err != nil {
-		logger.Errorf("Error closing container: %v", err)
-	} else {
-		logger.Infof("Container closed successfully")
-	}
+
+	// Close global database connection
+	provider.ShutdownProvider()
 
 	// Final log sync
 	logger.Sync()

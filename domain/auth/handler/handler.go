@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"go-api/app"
 	"go-api/domain/auth/entity"
 	"go-api/domain/auth/service"
 	"go-api/email"
@@ -14,10 +15,10 @@ type AuthHandler struct {
 	EmailService *email.EmailService
 }
 
-func NewAuthHandler(authService *service.AuthService, emailService *email.EmailService) *AuthHandler {
+func NewAuthHandler(p *app.Provider) *AuthHandler {
 	return &AuthHandler{
-		AuthService:  authService,
-		EmailService: emailService,
+		AuthService:  service.NewAuthService(p),
+		EmailService: p.Email,
 	}
 }
 
