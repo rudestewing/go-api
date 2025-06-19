@@ -73,16 +73,6 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 		return response.BadRequest(c, err, "Registration failed")
 	}
 
-	// Send welcome email in background (don't block the response)
-	go func() {
-		if err := h.EmailService.SendWelcomeEmail(req.Email, req.Name); err != nil {
-			// Log the error but don't fail the registration
-			// You might want to use your logger here
-			// For now, we'll just continue silently
-			// In production, you should log this error properly
-		}
-	}()
-
 	return response.Success(c, nil, "User registered successfully")
 }
 
